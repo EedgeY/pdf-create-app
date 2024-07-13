@@ -1,6 +1,20 @@
 'use client';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Template, checkTemplate, getInputFromTemplate } from '@pdfme/common';
+import {
+  text,
+  readOnlyText,
+  barcodes,
+  image,
+  readOnlyImage,
+  svg,
+  readOnlySvg,
+  line,
+  tableBeta,
+  rectangle,
+  ellipse,
+} from '@pdfme/schemas';
+
 import { Form, Viewer } from '@pdfme/ui';
 import {
   getFontsData,
@@ -14,6 +28,23 @@ import { Input } from '@/components/ui/input';
 const headerHeight = 71;
 
 type Mode = 'form' | 'viewer';
+
+export const getPlugins = () => {
+  return {
+    Text: text,
+    ReadOnlyText: readOnlyText,
+    Table: tableBeta,
+    Line: line,
+    Rectangle: rectangle,
+    Ellipse: ellipse,
+    Image: image,
+    ReadOnlyImage: readOnlyImage,
+    SVG: svg,
+    ReadOnlySvg: readOnlySvg,
+    QR: barcodes.qrcode,
+    Code128: barcodes.code128,
+  };
+};
 
 const initTemplate = () => {
   let template: Template = getTemplateByPreset(
@@ -66,6 +97,7 @@ function App() {
         domContainer: uiRef.current,
         template,
         inputs,
+        plugins: getPlugins(),
         options: {
           font,
           labels: { clear: '消去' },

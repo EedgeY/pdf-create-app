@@ -1,6 +1,19 @@
 'use client';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Template, checkTemplate, Lang } from '@pdfme/common';
+import {
+  text,
+  readOnlyText,
+  barcodes,
+  image,
+  readOnlyImage,
+  svg,
+  readOnlySvg,
+  line,
+  tableBeta,
+  rectangle,
+  ellipse,
+} from '@pdfme/schemas';
 import { saveAs } from 'file-saver';
 import { Designer } from '@pdfme/ui';
 import {
@@ -27,6 +40,23 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
 const headerHeight = 65;
+
+export const getPlugins = () => {
+  return {
+    Text: text,
+    ReadOnlyText: readOnlyText,
+    Table: tableBeta,
+    Line: line,
+    Rectangle: rectangle,
+    Ellipse: ellipse,
+    Image: image,
+    ReadOnlyImage: readOnlyImage,
+    SVG: svg,
+    ReadOnlySvg: readOnlySvg,
+    QR: barcodes.qrcode,
+    Code128: barcodes.code128,
+  };
+};
 
 const initialTemplatePresetKey = 'invoice';
 const customTemplatePresetKey = 'custom';
@@ -63,6 +93,7 @@ function DesignView() {
       setTemplatePreset(storedTemplatePreset);
     }
   }, []);
+
   const onSaveTemplate = useCallback(
     (template?: Template) => {
       if (designerInstanceRef.current) {
@@ -123,6 +154,7 @@ function DesignView() {
       designerInstanceRef.current = new Designer({
         domContainer: designerRef.current,
         template,
+        plugins: getPlugins(),
         options: {
           font,
           lang,
@@ -131,7 +163,7 @@ function DesignView() {
           },
           theme: {
             token: {
-              colorPrimary: '#25c2a0',
+              colorPrimary: '#red',
             },
           },
         },
@@ -197,11 +229,7 @@ function DesignView() {
           </SelectTrigger>
           <SelectContent>
             {templatePresets.map((preset) => (
-              <SelectItem
-                key={preset.key}
-                value={preset.key}
-                disabled={preset.key === customTemplatePresetKey}
-              >
+              <SelectItem key={preset.key} value={preset.key}>
                 {preset.label}
               </SelectItem>
             ))}
