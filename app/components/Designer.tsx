@@ -29,9 +29,7 @@ import {
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -45,6 +43,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import PdfCodeDisplay from './PdfCodeDisplay';
+type SchemaInput = {
+  [key: string]: string | string[][];
+};
 
 const headerHeight = 65;
 
@@ -102,7 +104,9 @@ function DesignView() {
     height: 297,
     padding: [0, 0, 0, 0],
   });
-
+  const [showPdfCode, setShowPdfCode] = useState(false); // PDF生成コードの表示を制御する状態
+  const [generatedInputs, setGeneratedInputs] = useState<SchemaInput[]>([]);
+  const [templateName, setTemplateName] = useState<string>('');
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
     const storedTemplatePreset = localStorage.getItem('templatePreset');
@@ -265,39 +269,42 @@ function DesignView() {
 
   const generateTemplateJSON = useCallback(() => {
     if (designerInstanceRef.current) {
-      const template = designerInstanceRef.current.getTemplate();
+      const template: Template = designerInstanceRef.current.getTemplate();
+      setTemplateName('template6');
 
-      const inputs = template.schemas.flatMap((schema) => {
-        if (!schema) return [];
+      const inputs: SchemaInput[] = template.schemas.reduce(
+        (acc: SchemaInput[], schema) => {
+          if (!schema) return acc;
 
-        return Object.entries(schema).reduce<Record<string, any>[]>(
-          (acc, [key, field]) => {
+          const schemaInputs: SchemaInput = {};
+
+          Object.entries(schema).forEach(([key, field]) => {
             if (
               field &&
               typeof field === 'object' &&
               'type' in field &&
               !field.type.startsWith('readOnly')
             ) {
-              if (field.type === 'table') {
-                const rows = field.rows || 3; // デフォルト値または field から取得
-                const columns = field.columns || 3; // デフォルト値または field から取得
-                acc.push({
-                  [key]: '',
-                  table: Array(rows).fill(Array(columns).fill('')),
-                });
-              } else {
-                // テーブル以外のフィールドの場合
-                acc.push({ [key]: '' });
+              if (field.type === 'table' && Array.isArray(field.content)) {
+                schemaInputs[key] = field.content;
+              } else if (typeof field.content === 'string') {
+                schemaInputs[key] = field.content;
               }
             }
-            return acc;
-          },
-          []
-        );
-      });
+          });
+
+          if (Object.keys(schemaInputs).length > 0) {
+            acc.push(schemaInputs);
+          }
+
+          return acc;
+        },
+        []
+      );
+
+      setGeneratedInputs(inputs);
 
       const templateJSON = {
-        templateName: template.name || 'template',
         inputs: inputs,
       };
 
@@ -313,6 +320,12 @@ function DesignView() {
       });
 
       console.log('Generated Template JSON:', templateJSON);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error generating Template JSON',
+        description: 'Designer instance not found.',
+      });
     }
   }, [toast]);
 
@@ -374,7 +387,9 @@ function DesignView() {
         </label>
         <div className='flex gap-3'>
           <Button onClick={onDownloadTemplate}>Download Template</Button>
-          <Button onClick={onDownloadTemplate}>Download Template</Button>
+          <Button onClick={() => setShowPdfCode(!showPdfCode)}>
+            {showPdfCode ? 'Hide PDF Code' : 'Show PDF Code'}
+          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>Change Size</Button>
@@ -442,6 +457,9 @@ function DesignView() {
         ref={designerRef}
         style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
       />
+      {showPdfCode && (
+        <PdfCodeDisplay inputs={generatedInputs} templateName={templateName} />
+      )}
     </div>
   );
 }
