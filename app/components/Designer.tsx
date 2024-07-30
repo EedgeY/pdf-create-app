@@ -38,6 +38,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const headerHeight = 65;
 
@@ -85,6 +92,16 @@ function DesignView() {
   const [templatePreset, setTemplatePreset] = useState<string>(
     initialTemplatePresetKey
   );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [templateSize, setTemplateSize] = useState<{
+    width: number;
+    height: number;
+    padding: [number, number, number, number];
+  }>({
+    width: 210,
+    height: 297,
+    padding: [0, 0, 0, 0],
+  });
 
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
@@ -115,6 +132,31 @@ function DesignView() {
     },
     [toast]
   );
+  const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTemplateSize((prev) => ({ ...prev, [name]: parseInt(value, 10) }));
+  };
+
+  const handlePaddingChange = (index: number, value: string) => {
+    setTemplateSize((prev) => {
+      const newPadding: [number, number, number, number] = [...prev.padding];
+      newPadding[index] = parseInt(value, 10);
+      return { ...prev, padding: newPadding };
+    });
+  };
+
+  const applyTemplateSize = () => {
+    if (designerInstanceRef.current) {
+      const template = designerInstanceRef.current.getTemplate();
+      if (typeof template.basePdf === 'object' && 'width' in template.basePdf) {
+        template.basePdf.width = templateSize.width;
+        template.basePdf.height = templateSize.height;
+        template.basePdf.padding = templateSize.padding;
+        designerInstanceRef.current.updateTemplate(template);
+      }
+    }
+    setIsDialogOpen(false);
+  };
 
   const destroyDesigner = useCallback(() => {
     if (designerInstanceRef.current) {
@@ -154,6 +196,7 @@ function DesignView() {
       designerInstanceRef.current = new Designer({
         domContainer: designerRef.current,
         template,
+
         plugins: getPlugins(),
         options: {
           font,
@@ -206,7 +249,7 @@ function DesignView() {
   const onDownloadTemplate = useCallback(() => {
     if (designerInstanceRef.current) {
       downloadJsonFile(designerInstanceRef.current.getTemplate(), 'template');
-      console.log(designerInstanceRef.current.getTemplate());
+      console.log(designerInstanceRef.current.getTemplate().schemas);
     }
   }, []);
 
@@ -219,6 +262,59 @@ function DesignView() {
     localStorage.removeItem('template');
     localStorage.setItem('templatePreset', value);
   }, []);
+
+  const generateTemplateJSON = useCallback(() => {
+    if (designerInstanceRef.current) {
+      const template = designerInstanceRef.current.getTemplate();
+
+      const inputs = template.schemas.flatMap((schema) => {
+        if (!schema) return [];
+
+        return Object.entries(schema).reduce<Record<string, any>[]>(
+          (acc, [key, field]) => {
+            if (
+              field &&
+              typeof field === 'object' &&
+              'type' in field &&
+              !field.type.startsWith('readOnly')
+            ) {
+              if (field.type === 'table') {
+                const rows = field.rows || 3; // デフォルト値または field から取得
+                const columns = field.columns || 3; // デフォルト値または field から取得
+                acc.push({
+                  [key]: '',
+                  table: Array(rows).fill(Array(columns).fill('')),
+                });
+              } else {
+                // テーブル以外のフィールドの場合
+                acc.push({ [key]: '' });
+              }
+            }
+            return acc;
+          },
+          []
+        );
+      });
+
+      const templateJSON = {
+        templateName: template.name || 'template',
+        inputs: inputs,
+      };
+
+      const blob = new Blob([JSON.stringify(templateJSON, null, 2)], {
+        type: 'application/json',
+      });
+      saveAs(blob, 'template_inputs.json');
+
+      toast({
+        variant: 'success',
+        title: 'Template JSON generated!',
+        description: 'The JSON file has been downloaded.',
+      });
+
+      console.log('Generated Template JSON:', templateJSON);
+    }
+  }, [toast]);
 
   return (
     <div className='w-full'>
@@ -278,8 +374,64 @@ function DesignView() {
         </label>
         <div className='flex gap-3'>
           <Button onClick={onDownloadTemplate}>Download Template</Button>
+          <Button onClick={onDownloadTemplate}>Download Template</Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Change Size</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adjust Template Size</DialogTitle>
+              </DialogHeader>
+              <div className='grid gap-4 py-4'>
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <label htmlFor='width'>Width (mm)</label>
+                  <Input
+                    id='width'
+                    name='width'
+                    type='number'
+                    value={templateSize.width}
+                    onChange={handleSizeChange}
+                    className='col-span-3'
+                  />
+                </div>
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <label htmlFor='height'>Height (mm)</label>
+                  <Input
+                    id='height'
+                    name='height'
+                    type='number'
+                    value={templateSize.height}
+                    onChange={handleSizeChange}
+                    className='col-span-3'
+                  />
+                </div>
+                {['Top', 'Right', 'Bottom', 'Left'].map((side, index) => (
+                  <div
+                    key={side}
+                    className='grid grid-cols-4 items-center gap-4'
+                  >
+                    <label
+                      htmlFor={`padding-${side.toLowerCase()}`}
+                    >{`Padding ${side}`}</label>
+                    <Input
+                      id={`padding-${side.toLowerCase()}`}
+                      type='number'
+                      value={templateSize.padding[index]}
+                      onChange={(e) =>
+                        handlePaddingChange(index, e.target.value)
+                      }
+                      className='col-span-3'
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button onClick={applyTemplateSize}>Apply Changes</Button>
+            </DialogContent>
+          </Dialog>
 
           <Button onClick={() => onSaveTemplate()}>Save Template</Button>
+          <Button onClick={generateTemplateJSON}>Generate Template JSON</Button>
 
           <Button onClick={() => generatePDF(designerInstanceRef.current)}>
             Generate PDF
