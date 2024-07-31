@@ -16,9 +16,6 @@ const PdfCodeDisplay: React.FC<PdfCodeDisplayProps> = ({
   const [isCopied, setIsCopied] = useState(false);
 
   const pdfGenerationCode = `
-  const fetch = require('node-fetch');
-const fs = require('fs');
-const path = require('path');
 async function generatePdf() {
   try {
     const response = await fetch("https://pdf-create-server-node.onrender.com/v1/pdf", {
@@ -32,31 +29,22 @@ async function generatePdf() {
       }),
     });
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(\`HTTP error! status: \${response.status}, message: \${errorData.message}\`);
+      throw new Error(\`HTTP error! - status: \${response.status}, message: \${(await response.json()).message}\`);
     }
+
     const pdfBlob = await response.blob();
-    console.log("PDF generated successfully");
+    console.log("PDF generated successfully:", pdfBlob);
     return pdfBlob;
   } catch (error) {
     console.error("Failed to generate PDF:", error);
-    throw error;
   }
 }
 
 (async () => {
-  try {
-    const pdf = await generatePdf();
-    if (pdf) {
-      const arrayBuffer = await pdf.arrayBuffer();
-      const fileName = \`\${Date.now()}.pdf\`;
-      const filePath = path.join(process.cwd(), fileName);
-      fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
-      console.log(\`PDF saved to: \${filePath}\`);
-      console.log('You can now use the command "open ." to open the folder containing the PDF.');
-    }
-  } catch (error) {
-    console.error("Error generating or saving PDF:", error);
+  const pdf = await generatePdf();
+  if (pdf) {
+    const arrayBuffer = await pdf.arrayBuffer();
+    fs.writeFileSync(path.join(process.cwd(), \`\${Date.now()}.pdf\`), Buffer.from(arrayBuffer));
   }
 })();
 `.trim();
