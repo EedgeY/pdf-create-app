@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Template, checkTemplate, Lang } from '@pdfme/common';
+import { signature } from '../plugins/signature';
 import {
   text,
   readOnlyText,
@@ -67,6 +68,7 @@ export const getPlugins = () => {
     ReadOnlySvg: readOnlySvg,
     QR: barcodes.qrcode,
     Code128: barcodes.code128,
+    Signature: signature,
   };
 };
 

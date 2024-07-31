@@ -19,6 +19,7 @@ import {
   rectangle,
   ellipse,
 } from '@pdfme/schemas';
+import { signature } from './plugins/signature';
 
 const fontObjList = [
   {
@@ -122,6 +123,7 @@ export const getPlugins = () => {
     Ellipse: ellipse,
     Image: image,
     ReadOnlyImage: readOnlyImage,
+    signature: signature,
     SVG: svg,
     ReadOnlySvg: readOnlySvg,
     QR: barcodes.qrcode,
