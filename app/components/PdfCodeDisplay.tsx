@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface PdfCodeDisplayProps {
   inputs: any[];
@@ -84,11 +85,15 @@ async function generatePdf() {
   }, [pdfGenerationCode, toast]);
 
   return (
-    <div className='mt-4'>
-      <h2 className='text-lg font-semibold mb-2'>PDF Generation Code</h2>
-      <pre className='bg-gray-100 p-4 rounded-md overflow-x-auto'>
-        <code>{pdfGenerationCode}</code>
-      </pre>
+    <div className='mt-4 mx-10'>
+      <ScrollArea className='h-[600px] max-w-6xl'>
+        <h2 className='text-lg font-semibold mb-2'>PDF Generation Code</h2>
+        <pre className='bg-gray-100 p-4 rounded-md overflow-x-auto'>
+          <code>{pdfGenerationCode}</code>
+        </pre>
+        <ScrollBar />
+      </ScrollArea>
+
       <Button onClick={copyToClipboard} className='mt-2'>
         {isCopied ? 'Copied!' : 'Copy Code'}
       </Button>

@@ -29,6 +29,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -44,6 +45,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import PdfCodeDisplay from './PdfCodeDisplay';
+import { Label } from '@/components/ui/label';
+import { SelectLabel } from '@radix-ui/react-select';
 type SchemaInput = {
   [key: string]: string | string[][];
 };
@@ -104,7 +107,7 @@ function DesignView() {
     height: 297,
     padding: [0, 0, 0, 0],
   });
-  const [showPdfCode, setShowPdfCode] = useState(false); // PDF生成コードの表示を制御する状態
+  const [showPdfCode, setShowPdfCode] = useState(false);
   const [generatedInputs, setGeneratedInputs] = useState<SchemaInput[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
   useEffect(() => {
@@ -329,78 +332,123 @@ function DesignView() {
     }
   }, [toast]);
 
+  const generateTemplateCode = useCallback(() => {
+    if (designerInstanceRef.current) {
+      const template: Template = designerInstanceRef.current.getTemplate();
+      setTemplateName('template6');
+
+      const inputs: SchemaInput[] = template.schemas.reduce(
+        (acc: SchemaInput[], schema) => {
+          if (!schema) return acc;
+
+          const schemaInputs: SchemaInput = {};
+
+          Object.entries(schema).forEach(([key, field]) => {
+            if (
+              field &&
+              typeof field === 'object' &&
+              'type' in field &&
+              !field.type.startsWith('readOnly')
+            ) {
+              if (field.type === 'table' && Array.isArray(field.content)) {
+                schemaInputs[key] = field.content;
+              } else if (typeof field.content === 'string') {
+                schemaInputs[key] = field.content;
+              }
+            }
+          });
+
+          if (Object.keys(schemaInputs).length > 0) {
+            acc.push(schemaInputs);
+          }
+
+          return acc;
+        },
+        []
+      );
+
+      setGeneratedInputs(inputs);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error generating Template JSON',
+        description: 'Designer instance not found.',
+      });
+    }
+  }, [toast]);
+
   return (
     <div className='w-full'>
-      <header className='flex items-center justify-between p-4 bg-gray-100 h-16'>
-        <Select onValueChange={onChangeTemplatePresets} value={templatePreset}>
-          <SelectTrigger className='w-[180px]'>
-            <SelectValue placeholder='Select a preset' />
-          </SelectTrigger>
-          <SelectContent>
-            {templatePresets.map((preset) => (
-              <SelectItem key={preset.key} value={preset.key}>
-                {preset.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span style={{ margin: '0 1rem' }}>/</span>
+      <header className='flex items-center justify-center p-4 h-24 gap-3'>
+        <div className='grid w-full max-w-sm items-center gap-3'>
+          <Label htmlFor='loadTemplate'> テンプレート</Label>
+          <Select
+            onValueChange={onChangeTemplatePresets}
+            value={templatePreset}
+          >
+            <SelectTrigger className=''>
+              <SelectValue placeholder='Select a preset' />
+            </SelectTrigger>
 
-        <Select
-          value={lang}
-          onValueChange={(value: Lang) => {
-            setLang(value);
-          }}
-        >
-          <SelectTrigger className='w-[180px]'>
-            <SelectValue placeholder='Select a language' />
-          </SelectTrigger>
-          <SelectContent>
-            {translations.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>テンプレート選択</SelectLabel>
+                {templatePresets.map((preset) => (
+                  <SelectItem key={preset.key} value={preset.key}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <span className=''>/</span>
-        <label style={{ width: 180 }}>
-          Change BasePDF
+        <div className='grid w-full max-w-sm items-center gap-3'>
+          <Label htmlFor='loadTemplate'> ベース変更</Label>
           <Input
             type='file'
             accept='application/pdf'
             onChange={onChangeBasePDF}
           />
-        </label>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <label style={{ width: 180 }}>
-          Load Template
-          <input
+        </div>
+        <div className='grid w-full max-w-sm items-center gap-3'>
+          <Label htmlFor='loadTemplate'>テンプレート読込</Label>
+
+          <Input
             type='file'
             accept='application/json'
+            placeholder='Load Template'
             onChange={(e) => {
               handleLoadTemplate(e, designerInstanceRef.current);
               setTemplatePreset(templatePreset);
             }}
           />
-        </label>
-        <div className='flex gap-3'>
+        </div>
+        <div className='flex gap-3 pt-6'>
           <Button onClick={onDownloadTemplate}>Download Template</Button>
-          <Button onClick={() => setShowPdfCode(!showPdfCode)}>
-            {showPdfCode ? 'Hide PDF Code' : 'Show PDF Code'}
-          </Button>
+          <Dialog open={showPdfCode} onOpenChange={setShowPdfCode}>
+            <DialogTrigger asChild>
+              <Button onClick={() => generateTemplateCode()}>コード生成</Button>
+            </DialogTrigger>
+            <DialogContent className='max-w-7xl '>
+              <PdfCodeDisplay
+                inputs={generatedInputs}
+                templateName={templateName}
+              />
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>Change Size</Button>
+              <Button>設定</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className='max-w-[425px]'>
               <DialogHeader>
-                <DialogTitle>Adjust Template Size</DialogTitle>
+                <DialogTitle>サイズ・余白</DialogTitle>
               </DialogHeader>
-              <div className='grid gap-4 py-4'>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <label htmlFor='width'>Width (mm)</label>
+              <div className='flex flex-col gap-4 py-4 items-center justify-center '>
+                <div className='flex flex-col w-full mx-2  gap-4'>
+                  <Label htmlFor='width'>幅 (mm)</Label>
                   <Input
                     id='width'
                     name='width'
@@ -410,8 +458,8 @@ function DesignView() {
                     className='col-span-3'
                   />
                 </div>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <label htmlFor='height'>Height (mm)</label>
+                <div className='flex flex-col w-full mx-2  gap-4'>
+                  <Label htmlFor='height'>高さ (mm)</Label>
                   <Input
                     id='height'
                     name='height'
@@ -421,14 +469,11 @@ function DesignView() {
                     className='col-span-3'
                   />
                 </div>
-                {['Top', 'Right', 'Bottom', 'Left'].map((side, index) => (
-                  <div
-                    key={side}
-                    className='grid grid-cols-4 items-center gap-4'
-                  >
-                    <label
+                {['高さ', '右', '下', '左'].map((side, index) => (
+                  <div key={side} className='flex flex-col w-full mx-2 gap-4'>
+                    <Label
                       htmlFor={`padding-${side.toLowerCase()}`}
-                    >{`Padding ${side}`}</label>
+                    >{`余白 ${side}`}</Label>
                     <Input
                       id={`padding-${side.toLowerCase()}`}
                       type='number'
@@ -441,15 +486,15 @@ function DesignView() {
                   </div>
                 ))}
               </div>
-              <Button onClick={applyTemplateSize}>Apply Changes</Button>
+              <Button onClick={applyTemplateSize}>設定変更</Button>
             </DialogContent>
           </Dialog>
 
-          <Button onClick={() => onSaveTemplate()}>Save Template</Button>
-          <Button onClick={generateTemplateJSON}>Generate Template JSON</Button>
+          <Button onClick={() => onSaveTemplate()}>保存</Button>
+          <Button onClick={generateTemplateJSON}>JSON</Button>
 
           <Button onClick={() => generatePDF(designerInstanceRef.current)}>
-            Generate PDF
+            印刷
           </Button>
         </div>
       </header>
@@ -457,9 +502,6 @@ function DesignView() {
         ref={designerRef}
         style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
       />
-      {showPdfCode && (
-        <PdfCodeDisplay inputs={generatedInputs} templateName={templateName} />
-      )}
     </div>
   );
 }
