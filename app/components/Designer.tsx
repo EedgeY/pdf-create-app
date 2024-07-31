@@ -41,6 +41,7 @@ import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -442,7 +443,7 @@ function DesignView() {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>設定</Button>
+              <Button>サイズ・余白</Button>
             </DialogTrigger>
             <DialogContent className='max-w-[425px]'>
               <DialogHeader>
@@ -489,14 +490,17 @@ function DesignView() {
                 ))}
               </div>
               <Button onClick={applyTemplateSize}>設定変更</Button>
+              <DialogDescription>
+                A4 = 幅:210　高さ:297 / A3 = 幅:297　高さ:420
+              </DialogDescription>
             </DialogContent>
           </Dialog>
 
-          <Button onClick={() => onSaveTemplate()}>保存</Button>
-          <Button onClick={generateTemplateJSON}>JSON</Button>
+          <Button onClick={() => onSaveTemplate()}>JSONテンプレート保存</Button>
+          <Button onClick={generateTemplateJSON}>curl用JSON</Button>
 
           <Button onClick={() => generatePDF(designerInstanceRef.current)}>
-            印刷
+            PDF生成
           </Button>
         </div>
       </header>
