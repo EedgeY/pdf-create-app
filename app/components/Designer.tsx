@@ -71,9 +71,15 @@ import {
 } from '@/components/ui/tooltip';
 import { set } from 'zod';
 import DynamicTemplateForm from './DynamicTemplateForm';
-type SchemaInput = {
-  [key: string]: string | string[][];
-};
+
+interface TemplateField {
+  value: string | string[][];
+  include: boolean;
+}
+
+interface TemplateInput {
+  [key: string]: TemplateField;
+}
 
 const headerHeight = 65;
 
@@ -148,7 +154,7 @@ function DesignView<TemplateListProps>({
     padding: [0, 0, 0, 0],
   });
   const [showPdfCode, setShowPdfCode] = useState(false);
-  const [generatedInputs, setGeneratedInputs] = useState<SchemaInput[]>([]);
+  const [generatedInputs, setGeneratedInputs] = useState<TemplateInput[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
   const [showDynamicForm, setShowDynamicForm] = useState(false);
 
@@ -317,11 +323,11 @@ function DesignView<TemplateListProps>({
     if (designerInstanceRef.current) {
       const template: Template = designerInstanceRef.current.getTemplate();
 
-      const inputs: SchemaInput[] = template.schemas.reduce(
-        (acc: SchemaInput[], schema) => {
+      const inputs: TemplateInput[] = template.schemas.reduce(
+        (acc: TemplateInput[], schema) => {
           if (!schema) return acc;
 
-          const schemaInputs: SchemaInput = {};
+          const schemaInputs: TemplateInput = {};
 
           Object.entries(schema).forEach(([key, field]) => {
             if (
@@ -331,9 +337,9 @@ function DesignView<TemplateListProps>({
               !field.type.startsWith('readOnly')
             ) {
               if (field.type === 'table' && Array.isArray(field.content)) {
-                schemaInputs[key] = field.content;
+                schemaInputs[key] = { value: field.content, include: true };
               } else if (typeof field.content === 'string') {
-                schemaInputs[key] = field.content;
+                schemaInputs[key] = { value: field.content, include: true };
               }
             }
           });
@@ -379,11 +385,11 @@ function DesignView<TemplateListProps>({
     if (designerInstanceRef.current) {
       const template: Template = designerInstanceRef.current.getTemplate();
 
-      const inputs: SchemaInput[] = template.schemas.reduce(
-        (acc: SchemaInput[], schema) => {
+      const inputs: TemplateInput[] = template.schemas.reduce(
+        (acc: TemplateInput[], schema) => {
           if (!schema) return acc;
 
-          const schemaInputs: SchemaInput = {};
+          const schemaInputs: TemplateInput = {};
 
           Object.entries(schema).forEach(([key, field]) => {
             if (
@@ -393,9 +399,9 @@ function DesignView<TemplateListProps>({
               !field.type.startsWith('readOnly')
             ) {
               if (field.type === 'table' && Array.isArray(field.content)) {
-                schemaInputs[key] = field.content;
+                schemaInputs[key] = { value: field.content, include: true };
               } else if (typeof field.content === 'string') {
-                schemaInputs[key] = field.content;
+                schemaInputs[key] = { value: field.content, include: true };
               }
             }
           });
@@ -584,6 +590,39 @@ function DesignView<TemplateListProps>({
     }
   }, [toast]);
 
+  const generateTemplateInputs = useCallback(() => {
+    if (designerInstanceRef.current) {
+      const template: Template = designerInstanceRef.current.getTemplate();
+
+      const inputs: TemplateInput[] = template.schemas.map((schema) => {
+        if (!schema) return {};
+
+        const schemaInputs: TemplateInput = {};
+
+        Object.entries(schema).forEach(([key, field]) => {
+          if (
+            field &&
+            typeof field === 'object' &&
+            'type' in field &&
+            !field.type.startsWith('readOnly')
+          ) {
+            if (field.type === 'table' && Array.isArray(field.content)) {
+              schemaInputs[key] = { value: field.content, include: true };
+            } else if (typeof field.content === 'string') {
+              schemaInputs[key] = { value: field.content, include: true };
+            }
+          }
+        });
+
+        return schemaInputs;
+      });
+
+      setGeneratedInputs(inputs);
+      return inputs;
+    }
+    return [];
+  }, []);
+
   const handleDynamicFormSubmit = useCallback((formData: any) => {
     // フォームデータを処理し、必要に応じてdesignerInstanceRefを更新
     if (designerInstanceRef.current) {
@@ -594,12 +633,40 @@ function DesignView<TemplateListProps>({
     }
     setShowDynamicForm(false);
   }, []);
+  const generateTemplateFormJSON = useCallback(() => {
+    const inputs = generateTemplateInputs();
+
+    const templateJSON = {
+      templateName: templateName,
+      inputs: inputs,
+    };
+
+    // const blob = new Blob([JSON.stringify(templateJSON, null, 2)], {
+    //   type: 'application/json',
+    // });
+    // saveAs(blob, 'template_inputs.json');
+
+    toast({
+      variant: 'success',
+      title: 'Template JSON generated!',
+      description: 'The JSON file has been downloaded.',
+    });
+
+    console.log('Generated Template JSON:', templateJSON);
+  }, [generateTemplateInputs, templateName, toast]);
+
+  // Update the handleDynamicFormOpen function
+  const handleDynamicFormOpen = useCallback(() => {
+    const inputs = generateTemplateInputs();
+    setGeneratedInputs(inputs);
+    setShowDynamicForm(true);
+  }, [generateTemplateInputs]);
 
   return (
     <div className='w-full'>
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
-        <Button onClick={() => setShowDynamicForm(true)} className='size-sm'>
-          入力データ編集
+        <Button onClick={handleDynamicFormOpen} className='size-sm'>
+          入力データ作成
         </Button>
         <Dialog open={showDynamicForm} onOpenChange={setShowDynamicForm}>
           <DialogContent className='max-w-3xl max-h-xl'>

@@ -13,6 +13,7 @@
     "@pdfme/generator": "^4.0.2",
     "@pdfme/schemas": "^4.0.2",
     "@pdfme/ui": "^4.0.2",
+    "@radix-ui/react-checkbox": "^1.1.1",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-scroll-area": "^1.1.0",
