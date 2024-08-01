@@ -49,6 +49,7 @@ import {
 import PdfCodeDisplay from './PdfCodeDisplay';
 import { Label } from '@/components/ui/label';
 import { SelectLabel } from '@radix-ui/react-select';
+import TemplateList from './TemplateList';
 type SchemaInput = {
   [key: string]: string | string[][];
 };
@@ -91,8 +92,21 @@ const translations: { label: string; value: string }[] = [
   { value: 'fr', label: 'French' },
   { value: 'es', label: 'Spanish' },
 ];
+interface PdfData {
+  _id: string;
+  name: string;
+  data: any;
+}
 
-function DesignView() {
+interface TemplateListProps {
+  templates: PdfData[];
+}
+
+function DesignView<TemplateListProps>({
+  templates,
+}: {
+  templates: PdfData[];
+}) {
   const { toast } = useToast();
   const designerRef = useRef<HTMLDivElement | null>(null);
   const designerInstanceRef = useRef<Designer | null>(null);
@@ -461,6 +475,46 @@ function DesignView() {
     }
   }, [toast]);
 
+  const loadTemplateButtonMongoDB = useCallback(
+    async (name: string) => {
+      if (!name) return;
+
+      try {
+        const response = await fetch(
+          `/api/mongo-templates?name=${encodeURIComponent(name)}`
+        );
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const templates = await response.json();
+        const template = templates.find((t: any) => t.name === name);
+
+        if (template && designerInstanceRef.current) {
+          designerInstanceRef.current.updateTemplate(template.data);
+          toast({
+            variant: 'success',
+            title: 'Success',
+            description: `テンプレート "${name}" を読み込みました。`,
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: `テンプレート "${name}" が見つかりません。`,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading template from MongoDB:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: `テンプレートの読み込みに失敗しました: ${error}`,
+        });
+      }
+    },
+    [toast]
+  );
+
   const deleteTemplateFromMongoDB = useCallback(async () => {
     const templateName = prompt('削除するテンプレート名を入力してください:');
     if (!templateName) return;
@@ -622,6 +676,11 @@ function DesignView() {
       <div
         ref={designerRef}
         style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
+      />
+
+      <TemplateList
+        templates={templates}
+        onLoadTemplate={loadTemplateButtonMongoDB}
       />
     </div>
   );
