@@ -1,10 +1,32 @@
+'use server';
+import getConfig from 'next/config';
 import { NextResponse } from 'next/server';
 
-const API_URL = process.env.MONGODB_DATA_API_URL;
-const API_KEY = process.env.NEXT_PUBLIC_MONGODB_API_KEY;
-const DATA_SOURCE = process.env.MONGODB_DATA_SOURCE;
-const DATABASE = process.env.NEXT_PUBLIC_MONGODB_DB;
-const COLLECTION = process.env.NEXT_PUBLIC_MONGODB_COLLECTION;
+const API_URL =
+  process.env.NODE_ENV === 'production'
+    ? process.env.PROD_MONGODB_DATA_API_URL
+    : process.env.NEXT_PUBLIC_MONGODB_DATA_API_URL;
+
+const DATA_SOURCE =
+  process.env.NODE_ENV === 'production'
+    ? process.env.PROD_MONGODB_DATA_SOURCE
+    : process.env.NEXT_PUBLIC_MONGODB_DATA_SOURCE;
+
+// 環境に応じて適切な値を選択
+const API_KEY =
+  process.env.NODE_ENV === 'production'
+    ? process.env.PROD_API_KEY
+    : process.env.NEXT_PUBLIC_MONGODB_API_KEY;
+
+const DATABASE =
+  process.env.NODE_ENV === 'production'
+    ? process.env.PROD_MONGODB_DB
+    : process.env.NEXT_PUBLIC_MONGODB_DB;
+
+const COLLECTION =
+  process.env.NODE_ENV === 'production'
+    ? process.env.PROD_MONGODB_COLLECTION
+    : process.env.NEXT_PUBLIC_MONGODB_COLLECTION;
 
 if (!API_URL || !API_KEY || !DATA_SOURCE || !DATABASE || !COLLECTION) {
   throw new Error('Missing MongoDB Atlas Data API configuration');
