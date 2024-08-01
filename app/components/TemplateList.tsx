@@ -46,7 +46,7 @@ const TemplateList: React.FC<TemplateListProps> = ({
               onClick={() => setIsSheetOpen(true)}
               className='size-sm bg-primary text-white  rounded-md flex justify-center items-center'
             >
-              <List size={24} />
+              <List className='w-5 h-5 text-fuchsia-600 font-bold' />
             </SheetTrigger>
           </TooltipTrigger>
           <TooltipContent>

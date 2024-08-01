@@ -51,6 +51,8 @@ import { Label } from '@/components/ui/label';
 import { SelectLabel } from '@radix-ui/react-select';
 import TemplateList from './TemplateList';
 import {
+  BotIcon,
+  BotMessageSquare,
   Code2,
   CurlyBraces,
   Download,
@@ -61,6 +63,7 @@ import {
   Loader2,
   RulerIcon,
   SaveIcon,
+  TextCursorInput,
   Trash2,
 } from 'lucide-react';
 import {
@@ -665,9 +668,6 @@ function DesignView<TemplateListProps>({
   return (
     <div className='w-full'>
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
-        <Button onClick={handleDynamicFormOpen} className='size-sm'>
-          入力データ作成
-        </Button>
         <Dialog open={showDynamicForm} onOpenChange={setShowDynamicForm}>
           <DialogContent className='max-w-3xl max-h-xl'>
             <DialogHeader>
@@ -687,13 +687,12 @@ function DesignView<TemplateListProps>({
             value={templateName}
           />
 
-          <Label htmlFor='loadTemplate'> テンプレート</Label>
           <Select
             onValueChange={onChangeTemplatePresets}
             value={templatePreset}
           >
             <SelectTrigger className=''>
-              <SelectValue placeholder='Select a preset' />
+              <SelectValue placeholder='テンプレート選択' />
             </SelectTrigger>
 
             <SelectContent>
@@ -708,27 +707,34 @@ function DesignView<TemplateListProps>({
             </SelectContent>
           </Select>
         </div>
+        <div className='flex flex-col gap-2'>
+          <div className='flex  w-full max-w-sm items-center gap-3'>
+            <Label htmlFor='loadTemplate'>
+              <BotMessageSquare className='h-5 w-5 text-green-600' />
+            </Label>
 
-        <div className='grid w-full max-w-sm items-center gap-3'>
-          <Label htmlFor='loadTemplate'> ベース変更</Label>
-          <Input
-            type='file'
-            accept='application/pdf'
-            onChange={onChangeBasePDF}
-          />
-        </div>
-        <div className='grid w-full max-w-sm items-center gap-3'>
-          <Label htmlFor='loadTemplate'>テンプレート読込</Label>
+            <Input
+              type='file'
+              accept='application/pdf'
+              placeholder='Base PDF'
+              onChange={onChangeBasePDF}
+            />
+          </div>
+          <div className='flex w-full max-w-sm items-center gap-3'>
+            <Label htmlFor='loadTemplate'>
+              <BotIcon className='h-5 w-5 text-orange-600' />
+            </Label>
 
-          <Input
-            type='file'
-            accept='application/json'
-            placeholder='Load Template'
-            onChange={(e) => {
-              handleLoadTemplate(e, designerInstanceRef.current);
-              setTemplatePreset(templatePreset);
-            }}
-          />
+            <Input
+              type='file'
+              accept='application/json'
+              placeholder='Load Template'
+              onChange={(e) => {
+                handleLoadTemplate(e, designerInstanceRef.current);
+                setTemplatePreset(templatePreset);
+              }}
+            />
+          </div>
         </div>
         <div className='flex gap-3 pt-6'>
           <div className='grid grid-cols-5 gap-1.5 '>
@@ -736,7 +742,7 @@ function DesignView<TemplateListProps>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={onDownloadTemplate} className='size-sm '>
-                    <Download className='h-5 w-5' />
+                    <Download className='h-5 w-5 text-yellow-400 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -754,7 +760,7 @@ function DesignView<TemplateListProps>({
                         onClick={() => generateTemplateCode()}
                         className='size-sm '
                       >
-                        <Code2 className='h-5 w-5' />
+                        <Code2 className='h-5 w-5 text-fuchsia-600 font-bold' />
                       </Button>
                     </DialogTrigger>
                   </TooltipTrigger>
@@ -777,7 +783,7 @@ function DesignView<TemplateListProps>({
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
                       <Button className='size-sm '>
-                        <RulerIcon className='h-5 w-5' />
+                        <RulerIcon className='h-5 w-5 text-yellow-400 font-bolds' />
                       </Button>
                     </DialogTrigger>
                   </TooltipTrigger>
@@ -841,7 +847,7 @@ function DesignView<TemplateListProps>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={saveTemplateToMongoDB} className='size-sm '>
-                    <SaveIcon className=' h-5 w-5' />
+                    <SaveIcon className=' h-5 w-5 text-fuchsia-600 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -856,7 +862,7 @@ function DesignView<TemplateListProps>({
                     onClick={loadTemplateFromMongoDB}
                     className='size-sm flex items-center justify-center'
                   >
-                    <ImportIcon className=' h-5 w-5' />
+                    <ImportIcon className=' h-5 w-5 text-yellow-400 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -871,7 +877,7 @@ function DesignView<TemplateListProps>({
                     onClick={deleteTemplateFromMongoDB}
                     className='size-xs '
                   >
-                    <Trash2 className=' h-5 w-5' />
+                    <Trash2 className=' h-5 w-5 text-yellow-400 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -887,7 +893,7 @@ function DesignView<TemplateListProps>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={() => onSaveTemplate()} className='size-sm '>
-                    <FileJson2 className=' h-5 w-5' />
+                    <FileJson2 className=' h-5 w-5 text-yellow-400 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -899,7 +905,7 @@ function DesignView<TemplateListProps>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={generateTemplateJSON} className='size-sm '>
-                    <CurlyBraces className=' h-5 w-5' />
+                    <CurlyBraces className=' h-5 w-5 text-fuchsia-600 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -914,7 +920,7 @@ function DesignView<TemplateListProps>({
                     onClick={() => generatePDF(designerInstanceRef.current)}
                     className='size-sm '
                   >
-                    <FileText className=' h-5 w-5' />
+                    <FileText className=' h-5 w-5 text-yellow-400 font-bold' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -923,6 +929,9 @@ function DesignView<TemplateListProps>({
               </Tooltip>
             </TooltipProvider>
           </div>
+          <Button onClick={handleDynamicFormOpen} className='size-sm'>
+            <TextCursorInput className='h-5 w-5 text-blue-600' />
+          </Button>
         </div>
         <Dialog
           open={isDialogLoadingOpen}
