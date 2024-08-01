@@ -379,6 +379,119 @@ function DesignView() {
       });
     }
   }, [toast]);
+  const saveTemplateToMongoDB = useCallback(async () => {
+    if (designerInstanceRef.current) {
+      const template = designerInstanceRef.current.getTemplate();
+      const templateName = prompt('テンプレート名を入力してください:');
+
+      if (!templateName) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'テンプレート名が必要です。',
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/mongo-templates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: templateName, data: template }),
+        });
+
+        if (response.ok) {
+          toast({
+            variant: 'success',
+            title: 'Success',
+            description: `テンプレート "${templateName}" が保存されました。`,
+          });
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Unknown error occurred');
+        }
+      } catch (error) {
+        console.error('Error saving template to MongoDB:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: `テンプレートの保存に失敗しました: ${error}`,
+        });
+      }
+    }
+  }, [toast]);
+
+  const loadTemplateFromMongoDB = useCallback(async () => {
+    const templateName = prompt('読み込むテンプレート名を入力してください:');
+    if (!templateName) return;
+
+    try {
+      const response = await fetch(
+        `/api/mongo-templates?name=${encodeURIComponent(templateName)}`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const templates = await response.json();
+      const template = templates.find((t: any) => t.name === templateName);
+
+      if (template && designerInstanceRef.current) {
+        designerInstanceRef.current.updateTemplate(template.data);
+        toast({
+          variant: 'success',
+          title: 'Success',
+          description: `テンプレート "${templateName}" を読み込みました。`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: `テンプレート "${templateName}" が見つかりません。`,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading template from MongoDB:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: `テンプレートの読み込みに失敗しました: ${error}`,
+      });
+    }
+  }, [toast]);
+
+  const deleteTemplateFromMongoDB = useCallback(async () => {
+    const templateName = prompt('削除するテンプレート名を入力してください:');
+    if (!templateName) return;
+
+    try {
+      const response = await fetch(
+        `/api/mongo-templates?name=${encodeURIComponent(templateName)}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      toast({
+        variant: 'success',
+        title: 'Success',
+        description: `テンプレート "${templateName}" が削除されました。`,
+      });
+    } catch (error) {
+      console.error('Error deleting template from MongoDB:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: `テンプレートの削除に失敗しました: ${error}`,
+      });
+    }
+  }, [toast]);
 
   return (
     <div className='w-full'>
@@ -495,7 +608,9 @@ function DesignView() {
               </DialogDescription>
             </DialogContent>
           </Dialog>
-
+          <Button onClick={saveTemplateToMongoDB}>MongoDBに保存</Button>
+          <Button onClick={loadTemplateFromMongoDB}>MongoDBから読み込み</Button>
+          <Button onClick={deleteTemplateFromMongoDB}>MongoDBから削除</Button>
           <Button onClick={() => onSaveTemplate()}>JSONテンプレート保存</Button>
           <Button onClick={generateTemplateJSON}>curl用JSON</Button>
 
