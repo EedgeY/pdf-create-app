@@ -44,6 +44,7 @@ async function makeApiRequest(action: string, data: any) {
     };
 
     const response = await fetch(`${API_URL}/action/${action}`, {
+      cache: 'no-cache',
       method: 'POST',
       headers: headers,
       body: JSON.stringify({

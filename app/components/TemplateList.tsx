@@ -16,14 +16,15 @@ const TemplateList: React.FC<TemplateListProps> = ({
   onLoadTemplate,
 }) => {
   return (
-    <div>
+    <div className='flex items-center overflow-x-auto py-4 gap-6'>
       {templates.map((template) => (
-        <Button
-          key={template._id}
+        <div
           onClick={() => onLoadTemplate(template.name)}
+          key={template._id}
+          className='flex-shrink-0 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer px-4 py-2 rounded-md'
         >
           {template.name}
-        </Button>
+        </div>
       ))}
     </div>
   );

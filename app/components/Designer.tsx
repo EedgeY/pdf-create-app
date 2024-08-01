@@ -549,6 +549,10 @@ function DesignView<TemplateListProps>({
 
   return (
     <div className='w-full'>
+      <TemplateList
+        templates={templates}
+        onLoadTemplate={loadTemplateButtonMongoDB}
+      />
       <header className='flex items-center justify-center p-4 h-24 gap-3'>
         <div className='grid w-full max-w-sm items-center gap-3'>
           <Label htmlFor='loadTemplate'> テンプレート</Label>
@@ -676,11 +680,6 @@ function DesignView<TemplateListProps>({
       <div
         ref={designerRef}
         style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
-      />
-
-      <TemplateList
-        templates={templates}
-        onLoadTemplate={loadTemplateButtonMongoDB}
       />
     </div>
   );
