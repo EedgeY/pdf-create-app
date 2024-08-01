@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, Suspense } from 'react';
 import { Template, checkTemplate, Lang } from '@pdfme/common';
 import { signature } from '../plugins/signature';
 import {
@@ -50,6 +50,25 @@ import PdfCodeDisplay from './PdfCodeDisplay';
 import { Label } from '@/components/ui/label';
 import { SelectLabel } from '@radix-ui/react-select';
 import TemplateList from './TemplateList';
+import {
+  Code2,
+  CurlyBraces,
+  Download,
+  FileJson2,
+  FileText,
+  Import,
+  ImportIcon,
+  Loader2,
+  RulerIcon,
+  SaveIcon,
+  Trash2,
+} from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 type SchemaInput = {
   [key: string]: string | string[][];
 };
@@ -96,6 +115,7 @@ interface PdfData {
   _id: string;
   name: string;
   data: any;
+  updated_at: string;
 }
 
 interface TemplateListProps {
@@ -115,6 +135,7 @@ function DesignView<TemplateListProps>({
     initialTemplatePresetKey
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDialogLoadingOpen, setIsDialogLoadingOpen] = useState(false);
   const [templateSize, setTemplateSize] = useState<{
     width: number;
     height: number;
@@ -127,6 +148,7 @@ function DesignView<TemplateListProps>({
   const [showPdfCode, setShowPdfCode] = useState(false);
   const [generatedInputs, setGeneratedInputs] = useState<SchemaInput[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
+
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
     const storedTemplatePreset = localStorage.getItem('templatePreset');
@@ -242,6 +264,7 @@ function DesignView<TemplateListProps>({
       });
     } catch (error) {
       console.error('Error building designer:', error);
+      setIsDialogLoadingOpen(false);
     }
   }, [lang, templatePreset, destroyDesigner, onSaveTemplate]);
 
@@ -290,7 +313,18 @@ function DesignView<TemplateListProps>({
   const generateTemplateJSON = useCallback(() => {
     if (designerInstanceRef.current) {
       const template: Template = designerInstanceRef.current.getTemplate();
-      setTemplateName('template6');
+      if (templateName === '') {
+        const name = prompt('テンプレート名を入力してください:');
+        if (!name) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'テンプレート名が必要です。',
+          });
+          return;
+        }
+        setTemplateName(name);
+      }
 
       const inputs: SchemaInput[] = template.schemas.reduce(
         (acc: SchemaInput[], schema) => {
@@ -352,7 +386,6 @@ function DesignView<TemplateListProps>({
   const generateTemplateCode = useCallback(() => {
     if (designerInstanceRef.current) {
       const template: Template = designerInstanceRef.current.getTemplate();
-      setTemplateName('template6');
 
       const inputs: SchemaInput[] = template.schemas.reduce(
         (acc: SchemaInput[], schema) => {
@@ -393,8 +426,10 @@ function DesignView<TemplateListProps>({
       });
     }
   }, [toast]);
+
   const saveTemplateToMongoDB = useCallback(async () => {
     if (designerInstanceRef.current) {
+      const date = new Date();
       const template = designerInstanceRef.current.getTemplate();
       const templateName = prompt('テンプレート名を入力してください:');
 
@@ -413,7 +448,11 @@ function DesignView<TemplateListProps>({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ name: templateName, data: template }),
+          body: JSON.stringify({
+            name: templateName,
+            data: template,
+            updated_at: date.toISOString(),
+          }),
         });
 
         if (response.ok) {
@@ -477,6 +516,8 @@ function DesignView<TemplateListProps>({
 
   const loadTemplateButtonMongoDB = useCallback(
     async (name: string) => {
+      setIsDialogLoadingOpen(true);
+
       if (!name) return;
 
       try {
@@ -491,12 +532,15 @@ function DesignView<TemplateListProps>({
 
         if (template && designerInstanceRef.current) {
           designerInstanceRef.current.updateTemplate(template.data);
+          setIsDialogLoadingOpen(false);
           toast({
             variant: 'success',
             title: 'Success',
             description: `テンプレート "${name}" を読み込みました。`,
           });
+          setTemplateName(name);
         } else {
+          setIsDialogLoadingOpen(false);
           toast({
             variant: 'destructive',
             title: 'Error',
@@ -504,6 +548,7 @@ function DesignView<TemplateListProps>({
           });
         }
       } catch (error) {
+        setIsDialogLoadingOpen(false);
         console.error('Error loading template from MongoDB:', error);
         toast({
           variant: 'destructive',
@@ -549,12 +594,15 @@ function DesignView<TemplateListProps>({
 
   return (
     <div className='w-full'>
-      <TemplateList
-        templates={templates}
-        onLoadTemplate={loadTemplateButtonMongoDB}
-      />
-      <header className='flex items-center justify-center p-4 h-24 gap-3'>
+      <header className='flex items-center justify-center p-4 h-32  gap-3'>
         <div className='grid w-full max-w-sm items-center gap-3'>
+          <Input
+            type='text'
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder='テンプレート名'
+            value={templateName}
+          />
+
           <Label htmlFor='loadTemplate'> テンプレート</Label>
           <Select
             onValueChange={onChangeTemplatePresets}
@@ -599,88 +647,218 @@ function DesignView<TemplateListProps>({
           />
         </div>
         <div className='flex gap-3 pt-6'>
-          <Button onClick={onDownloadTemplate}>Download Template</Button>
-          <Dialog open={showPdfCode} onOpenChange={setShowPdfCode}>
-            <DialogTrigger asChild>
-              <Button onClick={() => generateTemplateCode()}>コード生成</Button>
-            </DialogTrigger>
-            <DialogContent className='max-w-7xl '>
-              <PdfCodeDisplay
-                inputs={generatedInputs}
-                templateName={templateName}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className='grid grid-cols-5 gap-1.5 '>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={onDownloadTemplate} className='size-sm '>
+                    <Download className='h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>テンプレートダウンロード</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>サイズ・余白</Button>
-            </DialogTrigger>
-            <DialogContent className='max-w-[425px]'>
-              <DialogHeader>
-                <DialogTitle>サイズ・余白</DialogTitle>
-              </DialogHeader>
-              <div className='flex flex-col gap-4 py-4 items-center justify-center '>
-                <div className='flex flex-col w-full mx-2  gap-4'>
-                  <Label htmlFor='width'>幅 (mm)</Label>
-                  <Input
-                    id='width'
-                    name='width'
-                    type='number'
-                    value={templateSize.width}
-                    onChange={handleSizeChange}
-                    className='col-span-3'
-                  />
-                </div>
-                <div className='flex flex-col w-full mx-2  gap-4'>
-                  <Label htmlFor='height'>高さ (mm)</Label>
-                  <Input
-                    id='height'
-                    name='height'
-                    type='number'
-                    value={templateSize.height}
-                    onChange={handleSizeChange}
-                    className='col-span-3'
-                  />
-                </div>
-                {['高さ', '右', '下', '左'].map((side, index) => (
-                  <div key={side} className='flex flex-col w-full mx-2 gap-4'>
-                    <Label
-                      htmlFor={`padding-${side.toLowerCase()}`}
-                    >{`余白 ${side}`}</Label>
+            <Dialog open={showPdfCode} onOpenChange={setShowPdfCode}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button
+                        onClick={() => generateTemplateCode()}
+                        className='size-sm '
+                      >
+                        <Code2 className='h-5 w-5' />
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>コード生成</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DialogContent className='max-w-7xl '>
+                <PdfCodeDisplay
+                  inputs={generatedInputs}
+                  templateName={templateName}
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button className='size-sm '>
+                        <RulerIcon className='h-5 w-5' />
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>サイズ・余白</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <DialogContent className='max-w-[425px]'>
+                <DialogHeader>
+                  <DialogTitle>サイズ・余白</DialogTitle>
+                </DialogHeader>
+                <div className='flex flex-col gap-4 py-4 items-center justify-center '>
+                  <div className='flex flex-col w-full mx-2  gap-4'>
+                    <Label htmlFor='width'>幅 (mm)</Label>
                     <Input
-                      id={`padding-${side.toLowerCase()}`}
+                      id='width'
+                      name='width'
                       type='number'
-                      value={templateSize.padding[index]}
-                      onChange={(e) =>
-                        handlePaddingChange(index, e.target.value)
-                      }
+                      value={templateSize.width}
+                      onChange={handleSizeChange}
                       className='col-span-3'
                     />
                   </div>
-                ))}
-              </div>
-              <Button onClick={applyTemplateSize}>設定変更</Button>
-              <DialogDescription>
-                A4 = 幅:210　高さ:297 / A3 = 幅:297　高さ:420
-              </DialogDescription>
-            </DialogContent>
-          </Dialog>
-          <Button onClick={saveTemplateToMongoDB}>MongoDBに保存</Button>
-          <Button onClick={loadTemplateFromMongoDB}>MongoDBから読み込み</Button>
-          <Button onClick={deleteTemplateFromMongoDB}>MongoDBから削除</Button>
-          <Button onClick={() => onSaveTemplate()}>JSONテンプレート保存</Button>
-          <Button onClick={generateTemplateJSON}>curl用JSON</Button>
-
-          <Button onClick={() => generatePDF(designerInstanceRef.current)}>
-            PDF生成
-          </Button>
+                  <div className='flex flex-col w-full mx-2  gap-4'>
+                    <Label htmlFor='height'>高さ (mm)</Label>
+                    <Input
+                      id='height'
+                      name='height'
+                      type='number'
+                      value={templateSize.height}
+                      onChange={handleSizeChange}
+                      className='col-span-3'
+                    />
+                  </div>
+                  {['高さ', '右', '下', '左'].map((side, index) => (
+                    <div key={side} className='flex flex-col w-full mx-2 gap-4'>
+                      <Label
+                        htmlFor={`padding-${side.toLowerCase()}`}
+                      >{`余白 ${side}`}</Label>
+                      <Input
+                        id={`padding-${side.toLowerCase()}`}
+                        type='number'
+                        value={templateSize.padding[index]}
+                        onChange={(e) =>
+                          handlePaddingChange(index, e.target.value)
+                        }
+                        className='col-span-3'
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button onClick={applyTemplateSize}>設定変更</Button>
+                <DialogDescription>
+                  A4 = 幅:210　高さ:297 / A3 = 幅:297　高さ:420
+                </DialogDescription>
+              </DialogContent>
+            </Dialog>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={saveTemplateToMongoDB} className='size-sm '>
+                    <SaveIcon className=' h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>テンプレート保存</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={loadTemplateFromMongoDB}
+                    className='size-sm flex items-center justify-center'
+                  >
+                    <ImportIcon className=' h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>テンプレート読込</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={deleteTemplateFromMongoDB}
+                    className='size-xs '
+                  >
+                    <Trash2 className=' h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>テンプレート削除</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TemplateList
+              templates={templates}
+              onLoadTemplate={loadTemplateButtonMongoDB}
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => onSaveTemplate()} className='size-sm '>
+                    <FileJson2 className=' h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>templateJson</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={generateTemplateJSON} className='size-sm '>
+                    <CurlyBraces className=' h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>curl用JSON</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => generatePDF(designerInstanceRef.current)}
+                    className='size-sm '
+                  >
+                    <FileText className=' h-5 w-5' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>PDF生成</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
+        <Dialog
+          open={isDialogLoadingOpen}
+          onOpenChange={setIsDialogLoadingOpen}
+        >
+          <DialogTrigger asChild></DialogTrigger>
+          <DialogContent className='flex items-center justify-center gap-4  '>
+            <Loader2 className='mr-2 h-20  w-20 animate-spin' />
+            <DialogDescription>
+              テンプレートを読み込んでいます...
+            </DialogDescription>
+          </DialogContent>
+        </Dialog>
       </header>
-      <div
-        ref={designerRef}
-        style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
-      />
+      <Suspense fallback={<div>Loading...</div>}>
+        <div
+          ref={designerRef}
+          style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
+        />
+      </Suspense>
     </div>
   );
 }

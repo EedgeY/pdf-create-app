@@ -131,9 +131,18 @@ export const getPlugins = () => {
   };
 };
 
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export const generatePDF = async (
   currentRef: Designer | Form | Viewer | null
 ) => {
+  const uuid = generateUUID();
   if (!currentRef) return;
   const template = currentRef.getTemplate();
   const inputs =
@@ -145,7 +154,7 @@ export const generatePDF = async (
   const pdf = await generate({
     template,
     inputs,
-    options: { font, title: 'pdfme' },
+    options: { font, title: uuid },
     plugins: getPlugins(),
   });
 
