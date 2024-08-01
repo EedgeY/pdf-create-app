@@ -69,6 +69,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { set } from 'zod';
+import DynamicTemplateForm from './DynamicTemplateForm';
 type SchemaInput = {
   [key: string]: string | string[][];
 };
@@ -148,6 +150,7 @@ function DesignView<TemplateListProps>({
   const [showPdfCode, setShowPdfCode] = useState(false);
   const [generatedInputs, setGeneratedInputs] = useState<SchemaInput[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
+  const [showDynamicForm, setShowDynamicForm] = useState(false);
 
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
@@ -313,18 +316,6 @@ function DesignView<TemplateListProps>({
   const generateTemplateJSON = useCallback(() => {
     if (designerInstanceRef.current) {
       const template: Template = designerInstanceRef.current.getTemplate();
-      if (templateName === '') {
-        const name = prompt('テンプレート名を入力してください:');
-        if (!name) {
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'テンプレート名が必要です。',
-          });
-          return;
-        }
-        setTemplateName(name);
-      }
 
       const inputs: SchemaInput[] = template.schemas.reduce(
         (acc: SchemaInput[], schema) => {
@@ -359,6 +350,7 @@ function DesignView<TemplateListProps>({
       setGeneratedInputs(inputs);
 
       const templateJSON = {
+        templateName: templateName, // ここで直接stateの値を使用
         inputs: inputs,
       };
 
@@ -381,7 +373,7 @@ function DesignView<TemplateListProps>({
         description: 'Designer instance not found.',
       });
     }
-  }, [toast]);
+  }, [toast, templateName]); // templateNameをdependency arrayに追加
 
   const generateTemplateCode = useCallback(() => {
     if (designerInstanceRef.current) {
@@ -592,9 +584,34 @@ function DesignView<TemplateListProps>({
     }
   }, [toast]);
 
+  const handleDynamicFormSubmit = useCallback((formData: any) => {
+    // フォームデータを処理し、必要に応じてdesignerInstanceRefを更新
+    if (designerInstanceRef.current) {
+      const template = designerInstanceRef.current.getTemplate();
+      // formDataを使用してtemplateを更新
+      // 例: template.schemas = formData.inputs;
+      designerInstanceRef.current.updateTemplate(template);
+    }
+    setShowDynamicForm(false);
+  }, []);
+
   return (
     <div className='w-full'>
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
+        <Button onClick={() => setShowDynamicForm(true)} className='size-sm'>
+          入力データ編集
+        </Button>
+        <Dialog open={showDynamicForm} onOpenChange={setShowDynamicForm}>
+          <DialogContent className='max-w-3xl max-h-xl'>
+            <DialogHeader>
+              <DialogTitle>テンプレート入力データ編集</DialogTitle>
+            </DialogHeader>
+            <DynamicTemplateForm
+              initialData={generatedInputs}
+              onSubmit={handleDynamicFormSubmit}
+            />
+          </DialogContent>
+        </Dialog>
         <div className='grid w-full max-w-sm items-center gap-3'>
           <Input
             type='text'
