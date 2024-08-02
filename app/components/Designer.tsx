@@ -75,13 +75,8 @@ import {
 import { set } from 'zod';
 import DynamicTemplateForm from './DynamicTemplateForm';
 
-interface TemplateField {
-  value: string | string[][];
-  include: boolean;
-}
-
 interface TemplateInput {
-  [key: string]: TemplateField;
+  [key: string]: any;
 }
 
 const headerHeight = 65;
@@ -340,9 +335,9 @@ function DesignView<TemplateListProps>({
               !field.type.startsWith('readOnly')
             ) {
               if (field.type === 'table' && Array.isArray(field.content)) {
-                schemaInputs[key] = { value: field.content, include: true };
+                schemaInputs[key] = field.content;
               } else if (typeof field.content === 'string') {
-                schemaInputs[key] = { value: field.content, include: true };
+                schemaInputs[key] = field.content;
               }
             }
           });
@@ -402,9 +397,9 @@ function DesignView<TemplateListProps>({
               !field.type.startsWith('readOnly')
             ) {
               if (field.type === 'table' && Array.isArray(field.content)) {
-                schemaInputs[key] = { value: field.content, include: true };
+                schemaInputs[key] = field.content;
               } else if (typeof field.content === 'string') {
-                schemaInputs[key] = { value: field.content, include: true };
+                schemaInputs[key] = field.content;
               }
             }
           });
