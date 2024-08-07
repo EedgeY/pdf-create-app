@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TemplateField {
+  templateName?: string;
   value: string | string[][];
   include: boolean;
   type?: string;
@@ -28,6 +30,7 @@ interface TemplateInput {
 
 interface DynamicTemplateFormProps {
   initialData: TemplateInput[];
+  initialTemplateName: string;
   onSubmit: (formData: TemplateInput[]) => void;
 }
 
@@ -39,6 +42,7 @@ function DynamicTemplateForm({
   const [templateName, setTemplateName] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(0);
   const { toast } = useToast();
+
   useEffect(() => {
     if (initialData.length > 0) {
       const processedData = initialData.map((page) => {
@@ -56,6 +60,7 @@ function DynamicTemplateForm({
               tableContent = [['']];
             }
             acc[key] = {
+              templateName: templateName,
               value: tableContent,
               include: true,
               type: 'table',
@@ -64,6 +69,7 @@ function DynamicTemplateForm({
           } else {
             // その他のフィールドの処理
             acc[key] = {
+              templateName: templateName,
               value: typeof field.value === 'string' ? field.value : '',
               include: true,
               type: field.type,
@@ -87,7 +93,7 @@ function DynamicTemplateForm({
         },
       ]);
     }
-  }, [initialData]);
+  }, [initialData, templateName]);
 
   const handleInputChange = (
     page: number,
@@ -157,6 +163,54 @@ function DynamicTemplateForm({
     });
 
     onSubmit(inputs);
+  };
+
+  //pdfganerateapi
+  const generatePDF = async () => {
+    const processedInputs = inputs.map((page) =>
+      Object.entries(page).reduce((acc, [key, { value, include }]) => {
+        if (include) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as { [key: string]: string | string[][] })
+    );
+
+    const templateJSON = {
+      templateName,
+      inputs: processedInputs,
+    };
+
+    try {
+      const response = await fetch('/api/pdf-generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(templateJSON),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      saveAs(blob, `${templateName || 'generated'}.pdf`);
+
+      toast({
+        variant: 'success',
+        title: 'PDF generated successfully!',
+        description: 'The PDF file has been downloaded.',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error generating PDF',
+        description:
+          'An error occurred while generating the PDF. Please try again.',
+      });
+    }
   };
 
   return (
@@ -271,6 +325,7 @@ function DynamicTemplateForm({
       </div>
 
       <Button onClick={generateJSON}>Generate JSON</Button>
+      <Button onClick={generatePDF}>Submit</Button>
     </div>
   );
 }

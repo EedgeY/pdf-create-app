@@ -627,6 +627,7 @@ function DesignView<TemplateListProps>({
       const template = designerInstanceRef.current.getTemplate();
       // formDataを使用してtemplateを更新
       // 例: template.schemas = formData.inputs;
+      console.log('Dynamic Form Data:', template);
       designerInstanceRef.current.updateTemplate(template);
     }
     setShowDynamicForm(false);
@@ -670,12 +671,14 @@ function DesignView<TemplateListProps>({
             </DialogHeader>
             <DynamicTemplateForm
               initialData={generatedInputs}
+              initialTemplateName={templateName}
               onSubmit={handleDynamicFormSubmit}
             />
           </DialogContent>
         </Dialog>
         <div className='grid w-full max-w-sm items-center gap-3'>
           <Input
+            id='templateName'
             type='text'
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder='テンプレート名'
