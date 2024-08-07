@@ -35,11 +35,12 @@ interface DynamicTemplateFormProps {
 }
 
 function DynamicTemplateForm({
+  initialTemplateName,
   initialData,
   onSubmit,
 }: DynamicTemplateFormProps) {
   const [inputs, setInputs] = useState<TemplateInput[]>([]);
-  const [templateName, setTemplateName] = useState<string>('');
+  const [templateName, setTemplateName] = useState<string>(initialTemplateName);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const { toast } = useToast();
 
