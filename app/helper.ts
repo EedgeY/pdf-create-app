@@ -20,6 +20,7 @@ import {
   ellipse,
 } from '@pdfme/schemas';
 import { signature } from './plugins/signature';
+import { Label } from '@radix-ui/react-select';
 
 const fontObjList = [
   {
@@ -31,6 +32,16 @@ const fontObjList = [
     fallback: false,
     label: 'NotoSansJP-Regular',
     url: '/fonts/NotoSansJP-Regular.otf',
+  },
+  {
+    fallback: false,
+    label: 'DelaGothicOne-Regular',
+    url: '/fonts/DelaGothicOne-Regular.ttf',
+  },
+  {
+    fallback: false,
+    label: 'Rock3D-Regular',
+    url: '/fonts/Rock3D-Regular.ttf',
   },
 ];
 
