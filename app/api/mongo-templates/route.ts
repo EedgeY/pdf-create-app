@@ -1,5 +1,3 @@
-'use server';
-
 import { NextResponse } from 'next/server';
 
 const API_URL =
@@ -27,10 +25,6 @@ const COLLECTION =
   process.env.NODE_ENV === 'production'
     ? process.env.PROD_MONGODB_COLLECTION
     : process.env.NEXT_PUBLIC_MONGODB_COLLECTION;
-
-if (!API_URL || !API_KEY || !DATA_SOURCE || !DATABASE || !COLLECTION) {
-  throw new Error('Missing MongoDB Atlas Data API configuration');
-}
 
 async function makeApiRequest(action: string, data: any) {
   if (!API_URL || !API_KEY || !DATA_SOURCE || !DATABASE || !COLLECTION) {
