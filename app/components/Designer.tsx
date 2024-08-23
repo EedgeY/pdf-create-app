@@ -156,6 +156,9 @@ function DesignView<TemplateListProps>({
   const [templateName, setTemplateName] = useState<string>('');
   const [showDynamicForm, setShowDynamicForm] = useState(false);
 
+  const [prompt1, setPrompt1] = useState('');
+  const [result, setResult] = useState('');
+
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
     const storedTemplatePreset = localStorage.getItem('templatePreset');
@@ -661,6 +664,22 @@ function DesignView<TemplateListProps>({
     setShowDynamicForm(true);
   }, [generateTemplateInputs]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const prompt = 'Your prompt here'; // Replace with your actual prompt input
+    const res = await fetch('/api/openai', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    const data = await res.json();
+    console.log(data.result || 'Error occurred');
+  };
+
   return (
     <div className='w-full'>
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
@@ -950,6 +969,23 @@ function DesignView<TemplateListProps>({
           style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
         />
       </Suspense>
+
+      <div>
+        <h1>OpenAI with Next.js</h1>
+        <form onSubmit={handleSubmit}>
+          <input
+            type='text'
+            value={prompt1}
+            onChange={(e) => setPrompt1(e.target.value)}
+            placeholder='Enter your prompt'
+          />
+          <button type='submit'>Submit</button>
+        </form>
+        <div>
+          <h2>Result:</h2>
+          <p>{result}</p>
+        </div>
+      </div>
     </div>
   );
 }
