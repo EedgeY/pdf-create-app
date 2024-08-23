@@ -27,7 +27,7 @@ const COLLECTION =
     : process.env.NEXT_PUBLIC_MONGODB_COLLECTION;
 
 async function makeApiRequest(action: string, data: any) {
-  if (!API_URL || !API_KEY || !DATA_SOURCE || !DATABASE || !COLLECTION) {
+  if (!API_KEY) {
     throw new Error('Missing MongoDB Atlas Data API configuration');
   }
   try {
