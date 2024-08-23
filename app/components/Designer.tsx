@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState, useEffect, useCallback, Suspense } from 'react';
+import { useChat } from 'ai/react';
 import { Template, checkTemplate, Lang } from '@pdfme/common';
 import { signature } from '../plugins/signature';
 import {
@@ -155,9 +156,7 @@ function DesignView<TemplateListProps>({
   const [generatedInputs, setGeneratedInputs] = useState<TemplateInput[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
   const [showDynamicForm, setShowDynamicForm] = useState(false);
-
-  const [prompt1, setPrompt1] = useState('');
-  const [result, setResult] = useState('');
+  const { messages, input, handleInputChange, handleSubmit } = useChat();
 
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
@@ -664,22 +663,6 @@ function DesignView<TemplateListProps>({
     setShowDynamicForm(true);
   }, [generateTemplateInputs]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const prompt = 'Your prompt here'; // Replace with your actual prompt input
-    const res = await fetch('/api/openai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt }),
-    });
-
-    const data = await res.json();
-    console.log(data.result || 'Error occurred');
-  };
-
   return (
     <div className='w-full'>
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
@@ -970,21 +953,22 @@ function DesignView<TemplateListProps>({
         />
       </Suspense>
 
-      <div>
-        <h1>OpenAI with Next.js</h1>
+      <div className='flex flex-col w-full max-w-md py-24 mx-auto stretch'>
+        {messages.map((m) => (
+          <div key={m.id} className='whitespace-pre-wrap'>
+            {m.role === 'user' ? 'User: ' : 'AI: '}
+            {m.content}
+          </div>
+        ))}
+
         <form onSubmit={handleSubmit}>
           <input
-            type='text'
-            value={prompt1}
-            onChange={(e) => setPrompt1(e.target.value)}
-            placeholder='Enter your prompt'
+            className='fixed bottom-0 w-full max-w-md p-2 mb-8 border border-gray-300 rounded shadow-xl'
+            value={input}
+            placeholder='Say something...'
+            onChange={handleInputChange}
           />
-          <button type='submit'>Submit</button>
         </form>
-        <div>
-          <h2>Result:</h2>
-          <p>{result}</p>
-        </div>
       </div>
     </div>
   );
