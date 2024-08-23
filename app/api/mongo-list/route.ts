@@ -2,7 +2,6 @@
 
 import { NextResponse } from 'next/server';
 
-// 環境変数から適切な値を取得
 const API_URL =
   process.env.NODE_ENV === 'production'
     ? process.env.PROD_MONGODB_DATA_API_URL
@@ -13,6 +12,7 @@ const DATA_SOURCE =
     ? process.env.PROD_MONGODB_DATA_SOURCE
     : process.env.NEXT_PUBLIC_MONGODB_DATA_SOURCE;
 
+// 環境に応じて適切な値を選択
 const API_KEY =
   process.env.NODE_ENV === 'production'
     ? process.env.PROD_API_KEY
