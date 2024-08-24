@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
 
 11.imageを使うときは長くなるので、contentは空にしてください。
 
-tableを使う際は、
+＊＊＊＊tableを使う際は最重要＊＊＊＊、
 {
   "tableElement": {
     "type": "table",
@@ -214,7 +214,7 @@ tableを使う際は、
     }
   }
 }この形式で作成してください。
-参考ファイルID：[file-y3xwsj60hfc0503oH8u1yezY,file-Ss2VLXyLw62F22YpCF0ZzSab,file-fTRPt3cduQtLJbj0K6UlJKDD,file-5Hkn2zkimb4QEfUCOxoCZLoT]
+
 `,
       prompt: prompt,
     });
