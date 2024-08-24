@@ -157,6 +157,7 @@ function DesignView<TemplateListProps>({
   const [templateName, setTemplateName] = useState<string>('');
   const [showDynamicForm, setShowDynamicForm] = useState(false);
   const [designPrompt, setDesignPrompt] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
@@ -673,6 +674,8 @@ function DesignView<TemplateListProps>({
       return;
     }
 
+    setIsLoading(true); // ローディング状態を開始
+
     try {
       const response = await fetch('/api/openai', {
         method: 'POST',
@@ -705,11 +708,19 @@ function DesignView<TemplateListProps>({
         title: 'エラー',
         description: `テンプレート生成中にエラーが発生しました: ${error.message}`,
       });
+    } finally {
+      setIsLoading(false); // ローディング状態を終了
     }
   }, [designPrompt, toast, designerInstanceRef]);
 
   return (
     <div className='w-full'>
+      {isLoading && (
+        <div className='fixed inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 z-50'>
+          <Loader2 className='h-16 w-16 animate-spin text-blue-600' />
+          <span className='ml-4 text-xl'>テンプレートを生成中...</span>
+        </div>
+      )}
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
         {/* デザイン説明入力フィールド */}
         <div className='flex flex-col gap-2'>
@@ -1008,6 +1019,7 @@ function DesignView<TemplateListProps>({
           </DialogContent>
         </Dialog>
       </header>
+
       <Suspense fallback={<div>Loading...</div>}>
         <div
           ref={designerRef}
