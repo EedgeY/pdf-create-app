@@ -215,6 +215,8 @@ export async function POST(req: NextRequest) {
     }
   }
 }この形式で作成してください。
+  この構造で出力してください。
+  また、ユーザーの要望に沿った適切な要素を選択し配置すること。
 
 `,
       prompt: prompt,
