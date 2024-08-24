@@ -156,6 +156,7 @@ function DesignView<TemplateListProps>({
   const [generatedInputs, setGeneratedInputs] = useState<TemplateInput[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
   const [showDynamicForm, setShowDynamicForm] = useState(false);
+  const [designPrompt, setDesignPrompt] = useState<string>('');
 
   useEffect(() => {
     // クライアントサイドでのみ localStorage を使用
@@ -662,9 +663,71 @@ function DesignView<TemplateListProps>({
     setShowDynamicForm(true);
   }, [generateTemplateInputs]);
 
+  const generateTemplateFromDesignPrompt = useCallback(async () => {
+    if (!designPrompt.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'エラー',
+        description: 'デザイン説明を入力してください。',
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: designPrompt }), // JSON形式で送信
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'テンプレート生成に失敗しました。');
+      }
+
+      const { text } = await response.json();
+
+      if (designerInstanceRef.current) {
+        console.log('Generated Template JSON:', text);
+        designerInstanceRef.current.updateTemplate(JSON.parse(text));
+        toast({
+          variant: 'success',
+          title: 'テンプレート生成成功',
+          description: 'AIが生成したテンプレートが適用されました。',
+        });
+      }
+    } catch (error: any) {
+      console.error('AIによるテンプレート生成エラー:', error);
+      toast({
+        variant: 'destructive',
+        title: 'エラー',
+        description: `テンプレート生成中にエラーが発生しました: ${error.message}`,
+      });
+    }
+  }, [designPrompt, toast, designerInstanceRef]);
+
   return (
     <div className='w-full'>
       <header className='flex items-center justify-center p-4 h-32  gap-3'>
+        {/* デザイン説明入力フィールド */}
+        <div className='flex flex-col gap-2'>
+          <Label htmlFor='designPrompt'>デザイン説明</Label>
+          <Input
+            id='designPrompt'
+            type='text'
+            value={designPrompt}
+            onChange={(e) => setDesignPrompt(e.target.value)}
+            placeholder='希望するデザインの説明を入力してください'
+          />
+          <Button
+            onClick={generateTemplateFromDesignPrompt}
+            className='size-sm'
+          >
+            デザインからテンプレート生成
+          </Button>
+        </div>
         <Dialog open={showDynamicForm} onOpenChange={setShowDynamicForm}>
           <DialogContent className='max-w-3xl max-h-xl'>
             <DialogHeader>
