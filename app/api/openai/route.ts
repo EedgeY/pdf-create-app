@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
 
     const { text } = await generateText({
       model: openai('gpt-4o'),
+
       system: `下記のフォーマットに沿って、ユーザーから依頼される帳票のデザインをjson形式で提示せよ。
     出力はjsonのみ。一切のほかの言葉はいりません。
     ＊＊＊
