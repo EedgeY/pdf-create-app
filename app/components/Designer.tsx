@@ -683,6 +683,7 @@ function DesignView<TemplateListProps>({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ prompt: designPrompt }), // JSON形式で送信
+        cache: 'no-store',
       });
 
       if (!response.ok) {
