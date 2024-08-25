@@ -43,6 +43,11 @@ const fontObjList = [
     label: 'Rock3D-Regular',
     url: '/fonts/Rock3D-Regular.ttf',
   },
+  {
+    fallback: false,
+    label: 'Pacifico-Regular',
+    url: '/fonts/Pacifico-Regular.ttf',
+  },
 ];
 
 export const getFontsData = async () => {
@@ -160,7 +165,9 @@ export const generatePDF = async (
     typeof (currentRef as Viewer | Form).getInputs === 'function'
       ? (currentRef as Viewer | Form).getInputs()
       : getInputFromTemplate(template);
+
   const font = await getFontsData();
+  console.log(font);
 
   const pdf = await generate({
     template,
