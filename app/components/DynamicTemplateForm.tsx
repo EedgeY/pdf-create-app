@@ -297,22 +297,6 @@ function DynamicTemplateForm({
                 )}
               </div>
             ))}
-          <div className='mb-4'>
-            <Label htmlFor='newField'>Add New Field</Label>
-            <div className='flex gap-2'>
-              <Input
-                id='newField'
-                placeholder='Enter new field name'
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const fieldName = (e.target as HTMLInputElement).value;
-                    handleInputChange(currentPage, fieldName, '', true);
-                    (e.target as HTMLInputElement).value = '';
-                  }
-                }}
-              />
-            </div>
-          </div>
         </div>
       </ScrollArea>
       <div className='flex gap-2 mb-4'>
