@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const API_URL = 'https://pdf-create-server-node.onrender.com/v1/pdf';
+const API_URL = 'http://localhost:3001/v1/pdf';
 
 export async function POST(req: Request) {
   try {
