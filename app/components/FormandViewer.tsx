@@ -1,50 +1,18 @@
-'use client';
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState } from 'react';
 import { Template, checkTemplate, getInputFromTemplate } from '@pdfme/common';
-import {
-  text,
-  readOnlyText,
-  barcodes,
-  image,
-  readOnlyImage,
-  svg,
-  readOnlySvg,
-  line,
-  tableBeta,
-  rectangle,
-  ellipse,
-} from '@pdfme/schemas';
-
 import { Form, Viewer } from '@pdfme/ui';
 import {
   getFontsData,
   getTemplateByPreset,
   handleLoadTemplate,
   generatePDF,
+  getPlugins,
   isJsonString,
 } from '../helper';
-import { Input } from '@/components/ui/input';
 
 const headerHeight = 71;
 
 type Mode = 'form' | 'viewer';
-
-export const getPlugins = () => {
-  return {
-    Text: text,
-    ReadOnlyText: readOnlyText,
-    Table: tableBeta,
-    Line: line,
-    Rectangle: rectangle,
-    Ellipse: ellipse,
-    Image: image,
-    ReadOnlyImage: readOnlyImage,
-    SVG: svg,
-    ReadOnlySvg: readOnlySvg,
-    QR: barcodes.qrcode,
-    Code128: barcodes.code128,
-  };
-};
 
 const initTemplate = () => {
   let template: Template = getTemplateByPreset(
@@ -66,13 +34,14 @@ const initTemplate = () => {
 
 function App() {
   const uiRef = useRef<HTMLDivElement | null>(null);
-  const uiInstanceRef = useRef<Form | Viewer | null>(null);
+  const ui = useRef<Form | Viewer | null>(null);
+  const prevUiRef = useRef<HTMLDivElement | null>(null);
+
   const [mode, setMode] = useState<Mode>(
     (localStorage.getItem('mode') as Mode) ?? 'form'
   );
-  const modeRef = useRef(mode);
 
-  const buildUi = useCallback(async () => {
+  const buildUi = (mode: Mode) => {
     const template = initTemplate();
     let inputs = getInputFromTemplate(template);
     try {
@@ -85,86 +54,79 @@ function App() {
       localStorage.removeItem('inputs');
     }
 
-    const font = await getFontsData();
-
-    if (uiRef.current) {
-      if (uiInstanceRef.current) {
-        uiInstanceRef.current.destroy();
-        uiInstanceRef.current = null;
-      }
-
-      uiInstanceRef.current = new (modeRef.current === 'form' ? Form : Viewer)({
-        domContainer: uiRef.current,
-        template,
-        inputs,
-        plugins: getPlugins(),
-        options: {
-          font,
-          labels: { clear: '消去' },
-          theme: {
-            token: {
-              colorPrimary: '#25c2a0',
+    getFontsData().then((font) => {
+      if (uiRef.current) {
+        ui.current = new (mode === 'form' ? Form : Viewer)({
+          domContainer: uiRef.current,
+          template,
+          inputs,
+          options: {
+            font,
+            lang: 'ja',
+            labels: { clear: '消去' },
+            theme: {
+              token: {
+                colorPrimary: '#25c2a0',
+              },
             },
           },
-        },
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    modeRef.current = mode;
-    buildUi();
-
-    return () => {
-      if (uiInstanceRef.current) {
-        uiInstanceRef.current.destroy();
-        uiInstanceRef.current = null;
+          plugins: getPlugins(),
+        });
       }
-    };
-  }, [mode, buildUi]);
+    });
+  };
 
-  const onChangeMode = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const onChangeMode = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value as Mode;
     setMode(value);
     localStorage.setItem('mode', value);
-  }, []);
+    buildUi(value);
+  };
 
-  const onGetInputs = useCallback(() => {
-    if (uiInstanceRef.current) {
-      const inputs = uiInstanceRef.current.getInputs();
+  const onGetInputs = () => {
+    if (ui.current) {
+      const inputs = ui.current.getInputs();
       alert(JSON.stringify(inputs, null, 2));
       alert('Dumped as console.log');
       console.log(inputs);
     }
-  }, []);
+  };
 
-  const onSetInputs = useCallback(() => {
-    if (uiInstanceRef.current) {
+  const onSetInputs = () => {
+    if (ui.current) {
       const prompt = window.prompt('Enter Inputs JSONString') || '';
       try {
         const json = isJsonString(prompt) ? JSON.parse(prompt) : [{}];
-        uiInstanceRef.current.setInputs(json);
+        ui.current.setInputs(json);
       } catch (e) {
         alert(e);
       }
     }
-  }, []);
+  };
 
-  const onSaveInputs = useCallback(() => {
-    if (uiInstanceRef.current) {
-      const inputs = uiInstanceRef.current.getInputs();
+  const onSaveInputs = () => {
+    if (ui.current) {
+      const inputs = ui.current.getInputs();
       localStorage.setItem('inputs', JSON.stringify(inputs));
       alert('Saved!');
     }
-  }, []);
+  };
 
-  const onResetInputs = useCallback(() => {
+  const onResetInputs = () => {
     localStorage.removeItem('inputs');
-    if (uiInstanceRef.current) {
+    if (ui.current) {
       const template = initTemplate();
-      uiInstanceRef.current.setInputs(getInputFromTemplate(template));
+      ui.current.setInputs(getInputFromTemplate(template));
     }
-  }, []);
+  };
+
+  if (uiRef.current !== prevUiRef.current) {
+    if (prevUiRef.current && ui.current) {
+      ui.current.destroy();
+    }
+    buildUi(mode);
+    prevUiRef.current = uiRef.current;
+  }
 
   return (
     <div>
@@ -180,7 +142,7 @@ function App() {
         <strong>Form, Viewer</strong>
         <span style={{ margin: '0 1rem' }}>:</span>
         <div>
-          <Input
+          <input
             type='radio'
             onChange={onChangeMode}
             id='form'
@@ -202,7 +164,7 @@ function App() {
           <input
             type='file'
             accept='application/json'
-            onChange={(e) => handleLoadTemplate(e, uiInstanceRef.current)}
+            onChange={(e) => handleLoadTemplate(e, ui.current)}
           />
         </label>
         <span style={{ margin: '0 1rem' }}>/</span>
@@ -214,9 +176,7 @@ function App() {
         <span style={{ margin: '0 1rem' }}>/</span>
         <button onClick={onResetInputs}>Reset Inputs</button>
         <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={() => generatePDF(uiInstanceRef.current)}>
-          Generate PDF
-        </button>
+        <button onClick={() => generatePDF(ui.current)}>Generate PDF</button>
       </header>
       <div
         ref={uiRef}
