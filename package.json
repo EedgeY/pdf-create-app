@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^0.0.53",
+    "@ai-sdk/openai": "^1.1.0",
     "@pdfme/common": "^5.2.0",
     "@pdfme/generator": "^5.2.6",
     "@pdfme/schemas": "^5.2.0",

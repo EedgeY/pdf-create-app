@@ -1,0 +1,159 @@
+{
+  "schemas": [
+    [
+      {
+        "type": "svg",
+        "position": { "x": 20, "y": 20 },
+        "content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2L2 22h20L12 2z'/></svg>",
+        "width": 24,
+        "height": 24,
+        "readOnly": true,
+        "name": "logo"
+      },
+      {
+        "type": "text",
+        "position": { "x": 120, "y": 20 },
+        "content": "INVOICE",
+        "width": 70,
+        "height": 23,
+        "fontSize": 40,
+        "fontName": "NotoSerifJP-Regular",
+        "alignment": "left",
+        "name": "header"
+      },
+      {
+        "type": "text",
+        "position": { "x": 20, "y": 58 },
+        "content": "Billed to:",
+        "width": 85,
+        "height": 9,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "billedToLabel"
+      },
+      {
+        "type": "text",
+        "position": { "x": 20, "y": 68 },
+        "content": "株式会社サンプル\n東京都新宿区1-2-3\nTEL: 03-1234-5678",
+        "width": 85,
+        "height": 34,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "lineHeight": 1.2,
+        "name": "billedToInfo"
+      },
+      {
+        "type": "multiVariableText",
+        "position": { "x": 120, "y": 68 },
+        "text": "Invoice No.{invoiceNumber}\nDate: {date}",
+        "variables": ["invoiceNumber", "date"],
+        "width": 70,
+        "height": 34,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "invoiceInfo"
+      },
+      {
+        "type": "table",
+        "position": { "x": 20, "y": 111 },
+        "width": 170,
+        "height": 100,
+        "content": "[{\"商品名\":\"商品A\",\"数量\":2,\"単価\":5000,\"合計\":10000},{\"商品名\":\"商品B\",\"数量\":1,\"単価\":8000,\"合計\":8000}]",
+        "showHead": true,
+        "head": ["商品", "数量", "単価", "合計"],
+        "headWidthPercentages": [50, 15, 20, 15],
+        "tableStyles": {
+          "borderWidth": 0.1,
+          "borderColor": "#000000"
+        },
+        "headStyles": {
+          "fontSize": 13,
+          "alignment": "center",
+          "backgroundColor": "#f3f4f6",
+          "padding": {
+            "top": 5,
+            "bottom": 5
+          }
+        },
+        "bodyStyles": {
+          "fontSize": 13,
+          "alignment": {
+            "0": "left",
+            "3": "right"
+          },
+          "padding": {
+            "top": 5,
+            "bottom": 5
+          }
+        },
+        "name": "itemsTable"
+      },
+      {
+        "type": "text",
+        "position": { "x": 133, "y": 157 },
+        "content": "小計",
+        "width": 25,
+        "height": 8,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "subtotalLabel"
+      },
+      {
+        "type": "text",
+        "position": { "x": 159, "y": 157 },
+        "content": "18000",
+        "width": 26,
+        "height": 8,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "subtotal"
+      },
+      {
+        "type": "multiVariableText",
+        "position": { "x": 119, "y": 165 },
+        "text": "消費税 ({taxRate}%)",
+        "variables": ["taxRate"],
+        "width": 40,
+        "height": 9,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "taxLabel"
+      },
+      {
+        "type": "text",
+        "position": { "x": 159, "y": 165 },
+        "content": "1800",
+        "width": 26,
+        "height": 9,
+        "fontSize": 13,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "tax"
+      },
+      {
+        "type": "text",
+        "position": { "x": 132, "y": 175 },
+        "content": "合計",
+        "width": 27,
+        "height": 11,
+        "fontSize": 20,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "totalLabel"
+      },
+      {
+        "type": "text",
+        "position": { "x": 159, "y": 175 },
+        "content": "19800",
+        "width": 26,
+        "height": 11,
+        "fontSize": 20,
+        "fontName": "NotoSerifJP-Regular",
+        "name": "total"
+      }
+    ]
+  ],
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [20, 20, 20, 20]
+  }
+}
