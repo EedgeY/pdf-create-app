@@ -24,6 +24,14 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import AITemplateGenerator from './AITemplateGenerator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const headerHeight = 80;
 
@@ -32,7 +40,7 @@ const customTemplatePresetKey = 'custom';
 
 const templatePresets = getTemplatePresets();
 
-function App() {
+function DesinerApp() {
   const designerRef = useRef<HTMLDivElement | null>(null);
   const designer = useRef<Designer | null>(null);
   const [lang, setLang] = useState<Lang>('en');
@@ -42,6 +50,7 @@ function App() {
   const [prevDesignerRef, setPrevDesignerRef] = useState<HTMLDivElement | null>(
     null
   );
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
 
   useEffect(() => {
     const storedTemplatePreset = localStorage.getItem('templatePreset');
@@ -143,7 +152,7 @@ function App() {
         'template',
         JSON.stringify(template || designer.current.getTemplate())
       );
-      alert('Saved!');
+      alert('保存しました！');
     }
   };
 
@@ -158,6 +167,14 @@ function App() {
     localStorage.removeItem('template');
     localStorage.setItem('templatePreset', value);
     buildDesigner();
+  };
+
+  const handleApplyAITemplate = (template: Template) => {
+    if (designer.current) {
+      designer.current.updateTemplate(template);
+      setTemplatePreset(customTemplatePresetKey);
+      setIsAIDialogOpen(false);
+    }
   };
 
   if (designerRef.current !== prevDesignerRef) {
@@ -188,7 +205,7 @@ function App() {
             value={templatePreset}
           >
             <SelectTrigger className='w-[180px]'>
-              <SelectValue placeholder='Select a template' />
+              <SelectValue placeholder='テンプレートを選択' />
             </SelectTrigger>
             <SelectContent>
               {templatePresets.map((preset) => (
@@ -205,7 +222,7 @@ function App() {
         </label>
         <span style={{ margin: '0 1rem' }}>/</span>
         <label>
-          Lang:{' '}
+          言語:{' '}
           <select
             onChange={(e) => {
               setLang(e.target.value as Lang);
@@ -226,7 +243,7 @@ function App() {
         </label>
         <span style={{ margin: '0 1rem' }}>/</span>
         <Label style={{ width: 180 }}>
-          Change BasePDF
+          ベースPDF変更
           <Input
             type='file'
             accept='application/pdf'
@@ -235,7 +252,7 @@ function App() {
         </Label>
         <span style={{ margin: '0 1rem' }}>/</span>
         <Label style={{ width: 180 }}>
-          Load Template
+          テンプレート読込
           <Input
             type='file'
             accept='application/json'
@@ -246,15 +263,30 @@ function App() {
           />
         </Label>
         <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={onDownloadTemplate}>Download Template</button>
+        <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant='outline'>AI生成</Button>
+          </DialogTrigger>
+          <DialogContent className='sm:max-w-[625px]'>
+            <DialogHeader>
+              <DialogTitle>AI帳票テンプレート生成</DialogTitle>
+            </DialogHeader>
+            <AITemplateGenerator
+              onApplyTemplate={handleApplyAITemplate}
+              currentTemplate={
+                designer.current ? designer.current.getTemplate() : undefined
+              }
+            />
+          </DialogContent>
+        </Dialog>
         <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={() => onSaveTemplate()}>Save Template</button>
+        <button onClick={onDownloadTemplate}>テンプレート保存</button>
         <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={() => generatePDF(designer.current)}>
-          Generate PDF
-        </button>
+        <button onClick={() => onSaveTemplate()}>テンプレート保存</button>
+        <span style={{ margin: '0 1rem' }}>/</span>
+        <button onClick={() => generatePDF(designer.current)}>PDF生成</button>
         <Button variant='outline' onClick={onChangePadding}>
-          Change Padding
+          余白変更
         </Button>
       </header>
       <div
@@ -267,4 +299,4 @@ function App() {
   );
 }
 
-export default App;
+export default DesinerApp;
