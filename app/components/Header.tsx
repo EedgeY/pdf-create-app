@@ -11,6 +11,9 @@ export default function Header() {
           PDF Creator
         </span>
         <div className='flex gap-1.5 items-center'>
+          <span className='text-xs text-gray-500 font-medium mr-1'>
+            Powered by:
+          </span>
           <a
             href='https://pdfme.com'
             target='_blank'
