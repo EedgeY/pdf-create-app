@@ -15,7 +15,7 @@
 
 - [Next.js](https://nextjs.org/) - React フレームワーク
 - [Tailwind CSS](https://tailwindcss.com/) - スタイリング
-- [PDFME](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
+- [pdfme](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
 - [Radix UI](https://www.radix-ui.com/) - アクセシブルな UI コンポーネント
 - [OpenRouter](https://openrouter.ai/) - AI テンプレート生成用 API
 
@@ -82,12 +82,10 @@ AI テンプレート生成機能を使用するには：
 
 この機能には OpenRouter API が使用されており、`.env.local` ファイルに有効な API キーが必要です。
 
-## ライセンス
 
-[使用しているライセンスを記載]
 
 ## 謝辞
 
-- [PDF-me](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
+- [pdfme](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
 - [OpenRouter](https://openrouter.ai/) - AI モデルへのアクセスを提供
-- その他使用しているライブラリ・リソース
+
