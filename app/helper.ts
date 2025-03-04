@@ -169,6 +169,12 @@ export const translations: { label: string; value: string }[] = [
   { value: 'es', label: 'Spanish' },
 ];
 
+export const models = [
+  'anthropic/claude-3.7-sonnet',
+  'google/gemini-2.0-flash-001',
+  'deepseek/deepseek-chat',
+];
+
 export const generatePDF = async (
   currentRef: Designer | Form | Viewer | null
 ) => {
@@ -193,7 +199,9 @@ export const generatePDF = async (
       plugins: getPlugins(),
     });
 
-    const blob = new Blob([pdf.buffer], { type: 'application/pdf' });
+    const blob = new Blob([new Uint8Array(pdf.buffer)], {
+      type: 'application/pdf',
+    });
     window.open(URL.createObjectURL(blob));
   } catch (e) {
     alert(e + '\n\nCheck the console for full stack trace');

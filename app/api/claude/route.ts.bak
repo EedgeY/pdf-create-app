@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BLANK_PDF } from '@pdfme/common';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
+
+const models = ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022'];
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
+
+
+
+  
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const result = await generateText({
       // @ts-ignore - 異なるバージョンのAI SDKによる型の互換性問題を無視
-      model: anthropic('claude-3-7-sonnet-20250219'),
+      model: anthropic(models[1]),
       prompt: prompt,
       system: `# PDFmeテンプレート設計エキスパート
 
@@ -252,8 +257,8 @@ A4サイズ（210mm × 297mm）内での典型的なレイアウト区分：
 
 1. **余白とスペース**:
    - ページ周囲に余白（上下左右：15-20mm）を設定
-   - 要素間に十分なスペース（最低5mm）を確保
-   - 関連グループ間には大きめのスペース（10-15mm）を設置
+   - 要素間に十分なスペース（最低1mm）を確保
+   - 関連グループ間には大きめのスペース（5-10mm）を設置
 
 2. **整列と一貫性**:
    - 関連要素は同じ左端または上端に揃える

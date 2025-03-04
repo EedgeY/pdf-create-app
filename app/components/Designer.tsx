@@ -187,107 +187,129 @@ function DesinerApp() {
 
   return (
     <div className='w-full min-h-svh'>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          margin: '0 1rem',
-          fontSize: 'small',
-        }}
-      >
-        <strong>Designer</strong>
-        <span className='m-1'>:</span>
-        <label>
-          Template Preset:{' '}
-          <Select
-            onValueChange={onChangeTemplatePresets}
-            value={templatePreset}
-          >
-            <SelectTrigger className='w-[180px]'>
-              <SelectValue placeholder='テンプレートを選択' />
-            </SelectTrigger>
-            <SelectContent>
-              {templatePresets.map((preset) => (
-                <SelectItem
-                  key={preset.key}
-                  disabled={preset.key === customTemplatePresetKey}
-                  value={preset.key}
-                >
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <label>
-          言語:{' '}
-          <select
-            onChange={(e) => {
-              setLang(e.target.value as Lang);
-              if (designer.current) {
-                designer.current.updateOptions({
-                  lang: e.target.value as Lang,
-                });
-              }
-            }}
-            value={lang}
-          >
-            {translations.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <Label style={{ width: 180 }}>
-          ベースPDF変更
-          <Input
-            type='file'
-            accept='application/pdf'
-            onChange={onChangeBasePDF}
-          />
-        </Label>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <Label style={{ width: 180 }}>
-          テンプレート読込
-          <Input
-            type='file'
-            accept='application/json'
-            onChange={(e) => {
-              handleLoadTemplate(e, designer.current);
-              setTemplatePreset(customTemplatePresetKey);
-            }}
-          />
-        </Label>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant='outline'>AI生成</Button>
-          </DialogTrigger>
-          <DialogContent className='sm:max-w-[625px]'>
-            <DialogHeader>
-              <DialogTitle>AI帳票テンプレート生成</DialogTitle>
-            </DialogHeader>
-            <AITemplateGenerator
-              onApplyTemplate={handleApplyAITemplate}
-              currentTemplate={
-                designer.current ? designer.current.getTemplate() : undefined
-              }
-            />
-          </DialogContent>
-        </Dialog>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={onDownloadTemplate}>テンプレート保存</button>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={() => onSaveTemplate()}>テンプレート保存</button>
-        <span style={{ margin: '0 1rem' }}>/</span>
-        <button onClick={() => generatePDF(designer.current)}>PDF生成</button>
-        <Button variant='outline' onClick={onChangePadding}>
-          余白変更
-        </Button>
+      <header className='p-4 border-b flex flex-wrap items-center gap-3'>
+        <strong className='text-lg mr-2'>Designer</strong>
+
+        <div className='flex items-center gap-2'>
+          <Label className='mb-0'>
+            テンプレート:
+            <Select
+              onValueChange={onChangeTemplatePresets}
+              value={templatePreset}
+            >
+              <SelectTrigger className='w-[180px] ml-2'>
+                <SelectValue placeholder='テンプレートを選択' />
+              </SelectTrigger>
+              <SelectContent>
+                {templatePresets.map((preset) => (
+                  <SelectItem
+                    key={preset.key}
+                    disabled={preset.key === customTemplatePresetKey}
+                    value={preset.key}
+                  >
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Label>
+
+          <Label className='mb-0 ml-4'>
+            言語:
+            <Select
+              onValueChange={(value) => {
+                setLang(value as Lang);
+                if (designer.current) {
+                  designer.current.updateOptions({
+                    lang: value as Lang,
+                  });
+                }
+              }}
+              value={lang}
+            >
+              <SelectTrigger className='w-[120px] ml-2'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {translations.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Label>
+        </div>
+
+        <div className='flex items-center gap-2 ml-auto'>
+          <div className='flex items-center gap-2'>
+            <Label className='mb-0'>
+              <Button variant='outline' size='sm' asChild>
+                <label>
+                  ベースPDF変更
+                  <Input
+                    type='file'
+                    accept='application/pdf'
+                    onChange={onChangeBasePDF}
+                    className='hidden'
+                  />
+                </label>
+              </Button>
+            </Label>
+
+            <Label className='mb-0'>
+              <Button variant='outline' size='sm' asChild>
+                <label>
+                  テンプレート読込
+                  <Input
+                    type='file'
+                    accept='application/json'
+                    onChange={(e) => {
+                      handleLoadTemplate(e, designer.current);
+                      setTemplatePreset(customTemplatePresetKey);
+                    }}
+                    className='hidden'
+                  />
+                </label>
+              </Button>
+            </Label>
+          </div>
+
+          <div className='flex items-center gap-2 ml-2'>
+            <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant='outline' size='sm'>
+                  AI生成
+                </Button>
+              </DialogTrigger>
+              <DialogContent className='sm:max-w-[625px]'>
+                <DialogHeader>
+                  <DialogTitle>AI帳票テンプレート生成</DialogTitle>
+                </DialogHeader>
+                <AITemplateGenerator
+                  onApplyTemplate={handleApplyAITemplate}
+                  currentTemplate={
+                    designer.current
+                      ? designer.current.getTemplate()
+                      : undefined
+                  }
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Button variant='outline' size='sm' onClick={onDownloadTemplate}>
+              テンプレート保存
+            </Button>
+
+            <Button
+              variant='default'
+              size='sm'
+              onClick={() => generatePDF(designer.current)}
+            >
+              PDF生成
+            </Button>
+          </div>
+        </div>
       </header>
       <div
         ref={designerRef}

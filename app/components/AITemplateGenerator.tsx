@@ -16,6 +16,14 @@ import { Template, BLANK_PDF } from '@pdfme/common';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2, Sparkles, RotateCw } from 'lucide-react';
+import { models } from '@/app/helper';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AITemplateGeneratorProps {
   onApplyTemplate: (template: Template) => void;
@@ -30,6 +38,7 @@ export function AITemplateGenerator({
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>(models[3]); // デフォルトはdeepseek/deepseek-chat
   const { toast } = useToast();
 
   // ランダムなプロンプトを生成する関数
@@ -46,7 +55,7 @@ export function AITemplateGenerator({
           ? 'A4'
           : documentSizes[Math.floor(Math.random() * documentSizes.length)];
 
-      const response = await fetch('/api/openrouter', {
+      const response = await fetch('/api/openrouter/prompt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +109,7 @@ export function AITemplateGenerator({
     setError(null);
 
     try {
-      const response = await fetch('/api/claude', {
+      const response = await fetch('/api/openrouter/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,6 +118,7 @@ export function AITemplateGenerator({
           prompt:
             prompt +
             '\n\n重要：フォントは全てNotoSerifJP-Regularを使用してください。また、テーブルのcontentは必ず有効なJSON文字列（JSON.stringify()で文字列化した2次元配列）を設定してください。',
+          model: selectedModel,
         }),
       });
 
@@ -262,20 +272,79 @@ export function AITemplateGenerator({
   };
 
   const examplePrompts = [
-    'A4サイズの請求書テンプレートを作成してください。会社ロゴ用のエリアを左上に、会社情報（名前、住所、連絡先）を右上に配置し、請求書番号、発行日、支払期日のフィールドを含めてください。顧客情報セクション、ID、説明、数量、単価、金額の列を持つ詳細な項目テーブル、右下に小計、税金（10％）、合計金額、下部に支払条件と銀行詳細を配置してください。',
+    `PDF テンプレート生成プロンプト：予約表（A4、1ページ）モダンでクリーンなデザインの予約表テンプレートを生成してください。ヘッダーに予約タイトル（例：「〇月〇日 予約状況」）と日付、フッターに会社名/連絡先を配置。本文は予約情報を記載するテーブルを配置し、視覚的階層を明確にします。カラースキームは、背景色を#f0f8ff（薄い水色）、メインテキストカラーを#333333、アクセントカラーを#4682b4（青色）とします。レイアウトは、ヘッダー：本文：フッターの比率を1:7:2とし、上下の余白を20mm、左右の余白を15mmに設定。グリッドシステムを用いて要素を整列させ、一貫性を持たせます。タイポグラフィは、見出しに'Noto Sans JP' 16pt、本文に'Noto Sans JP' 11pt、注釈に'Noto Sans JP' 9ptを使用。テーブルは5行4列とし、罫線はsolid 1px #ccccccで指定。デザイン要素として、ヘッダー下部に#4682b4の区切り線を配置します。schema: [
+  ["header", "text", "予約状況", "font-size: 16pt; color: #333333;"],
+  ["date", "text", "2024年〇月〇日", "font-size: 12pt; color: #333333;"],
+  ["table", "table", "[["時間","氏名","コース","担当"],["10:00","山田太郎","カット","田中"],["11:00","佐藤花子","パーマ","鈴木"],["13:00","田中一郎","カラー","高橋"],["14:00","　","　","　"]]", "border: solid 1px #cccccc; font-size: 11pt;"],
+  ["footer", "text", "株式会社〇〇　連絡先：〇〇", "font-size: 9pt; color: #333333; text-align: right;"]
+]`,
 
-    'A4サイズの診断書テンプレートを作成してください。上部に病院ロゴスペース、患者詳細セクション（名前、生年月日、ID番号、住所）、診断セクション（診察日、詳細な医学的所見エリア）、治療推奨事項、投薬詳細（用量と期間）、フォローアップ予約セクション、日付と公印エリアを含む医師の署名ブロックを配置してください。',
+    `PDFテンプレート生成AIへ：A4サイズのメニュー表を作成してください。カラースキームは、背景色を#f8f8ff（明るいグレー）、メインテキスト色を#333333（濃いグレー）、アクセントカラーを#e67e22（オレンジ）とします。デザインスタイルはモダンでクリーンな印象を目指してください。
 
-    'A4サイズの在庫管理レポートを作成してください。会社ヘッダー、レポート生成日、倉庫位置選択器、上部に在庫サマリー統計（総アイテム数、総価値、再注文ポイント以下のアイテム）、SKU、製品名、カテゴリー、現在の数量、最小レベル、再注文ポイント、単価、総価値、最終入庫日、担当スタッフメンバーの列を持つメインアイテムテーブルを含めてください。',
+レイアウト構成は、ヘッダーに店名（フォント: 'Noto Sans JP', サイズ: 18pt, 色: #e67e22）、本文にメニュー項目、フッターに連絡先情報を配置します。ヘッダーの高さは20mm、フッターの高さは15mmとし、本文領域を最大限確保してください。余白は上下20mm、左右15mmに設定。
 
-    'A4サイズのプロジェクト状況レポートテンプレートを作成してください。上部に会社ブランディングエリア、プロジェクトタイトルとIDセクション、報告期間日付、エグゼクティブサマリーセクション、プロジェクトメトリクスダッシュボード（完了率、予算状況、スケジュール状況をトラフィックライトインジケーターで表示）、計画日と実際の日付を比較するマイルストーントラッキングテーブル、優先レベル付きの問題/リスクセクション、次のステップ、プロジェクトマネージャーと利害関係者の承認署名ブロックを含めてください。',
+メニュー項目はテーブル形式で表示し、'商品名'、'説明'、'価格'の3列構成とします。テーブルのフォントサイズは11pt、行間は1.5とし、読みやすさを重視してください。テーブルの罫線はsolid 1px #ccccccで、セルのpaddingは5pxとします。
+テーブルは最大5行とし、ページに収まるようにしてください。
+contentは、[["ハンバーグ","デミグラスソース","1200"],["ステーキ","ミディアムレア","2500"],["パスタ","カルボナーラ","1500"],["サラダ","シーザーサラダ","800"],["　","　","　"]]とします。
+行が足りない部分は空白文字で埋めてください。
+
+フッターの連絡先情報は、'住所'、'電話番号'、'営業時間'を記載し、フォントサイズは9pt、色は#777777とします。
+
+視覚的階層をつけるため、商品名は太字（font-weight: bold）で強調し、価格はアクセントカラーを使用してください。区切り線として、各カテゴリの間にdashed 1px #ddddddの線を引いてください。全体的に角丸のradius: 4pxを適用し、柔らかい印象に仕上げてください。
+
+schema: [
+  ["header", "store_name"],
+  ["table", "menu_items"],
+  ["footer", "contact_info"]
+]
+`,
+
+    `診断書のPDFテンプレートを生成してください。A4サイズ、プロフェッショナルでクリーンなデザインを希望します。
+
+レイアウトは、ヘッダーに病院名・ロゴ、患者情報、発行日を配置。本文は診断結果、医師の所見、処方内容を記載。フッターに病院の連絡先、医師名、署名欄を設けてください。
+
+視覚的階層は、タイトル（病院名、診断書名）を最大フォントサイズ、見出し（患者情報、診断結果）を中フォントサイズ、本文、注釈は小フォントサイズで表現。重要情報は枠線や背景色で強調してください。
+
+余白は上下20mm、左右15mm。'Noto Sans JP'フォントを使用し、見出し16pt、本文11pt、注釈9pt。メインカラーは#336699、アクセントカラーは#f0f8ff。
+
+ロゴはヘッダー左上に配置、病院名を右側に配置（行を分けてください）。区切り線はヘッダー下部とフッター上部に「solid 1px #cccccc」。角丸はボタンや入力フィールドに「border-radius: 4px」。影効果は「box-shadow: 0 2px 4px rgba(0,0,0,0.1)」を控えめに使用。
+
+処方内容を示すテーブルは５行以内とし、以下のダミーデータを含めてください。
+"content": "[["薬剤名A","1回1錠","朝食後","7日分"],["薬剤名B","1回2錠","夕食後","14日分"],["薬剤名C","頓服","症状時","必要時"],["　","　","　","　"],["　","　","　","　"]]”。テーブルの各列の幅を適切に調整してください。
+
+schema: [
+  ["header"],
+  ["patient_info"],
+  ["diagnosis_title"],
+  ["diagnosis_results"],
+  ["doctor_opinion"],
+  ["prescription_table"],
+  ["notes"],
+  ["doctor_signature"],
+ ["date"],
+  ["footer"]
+]
+`,
   ];
 
   return (
     <Card className='w-full'>
-      <CardHeader>
-        <CardTitle>AI帳票テンプレート生成</CardTitle>
-        <CardDescription>
+      <CardHeader className='relative overflow-hidden'>
+        <div className='absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full opacity-20'></div>
+        <div className='absolute -left-10 -bottom-10 w-32 h-32 bg-gradient-to-tr from-blue-400 to-cyan-500 rounded-full opacity-20'></div>
+
+        <CardTitle className='flex items-center gap-2 text-2xl font-bold'>
+          <span className='bg-gradient-to-r from-pink-500 to-violet-500 text-transparent bg-clip-text'>
+            AI帳票テンプレート生成
+          </span>
+          <span className='text-xs font-normal px-2 py-1 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white'>
+            PDF
+          </span>
+          <span className='text-xs font-normal px-2 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white'>
+            OpenRouter
+          </span>
+        </CardTitle>
+        <CardDescription className='relative z-10'>
           生成AIに希望する帳票の詳細を伝えて、テンプレートを自動生成します
         </CardDescription>
       </CardHeader>
@@ -286,7 +355,8 @@ export function AITemplateGenerator({
             <div className='relative'>
               <Textarea
                 id='prompt'
-                placeholder='作成したい帳票の詳細を入力してください（例：請求書テンプレートを作成してください。会社名、ロゴ、請求日...）'
+                placeholder=' 作成したい帳票の詳細を入力してください（例：請求書テンプレートを作成してください。会社名、ロゴ、請求日...）　
+                プロンプト生成もできます(google/gemini-2.0-flash-001)。'
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className='min-h-32 pr-10'
@@ -307,6 +377,25 @@ export function AITemplateGenerator({
             </div>
           </div>
 
+          <div>
+            <Label htmlFor='model-select'>使用するモデル</Label>
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger id='model-select'>
+                <SelectValue
+                  placeholder='モデルを選択'
+                  defaultValue={models[2]}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((model, index) => (
+                  <SelectItem key={index} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {error && (
             <Alert variant='destructive'>
               <AlertCircle className='h-4 w-4' />
@@ -322,10 +411,12 @@ export function AITemplateGenerator({
                 <Button
                   key={index}
                   variant='outline'
-                  className='justify-start h-auto p-2 text-left whitespace-normal break-words'
+                  className='justify-start h-auto p-2 text-left whitespace-normal break-word '
                   onClick={() => setPrompt(examplePrompt)}
                 >
-                  {examplePrompt}
+                  {examplePrompt.length > 150
+                    ? `${examplePrompt.substring(0, 150)}...`
+                    : examplePrompt}
                 </Button>
               ))}
             </div>

@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# PDF 作成アプリ
 
-## Getting Started
+このアプリケーションは、カスタマイズ可能な PDF テンプレートのデザインと生成を行うためのツールです。請求書、領収書、報告書などの様々なビジネス文書を作成することができます。
 
-First, run the development server:
+## 機能
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- 複数のテンプレートプリセット（請求書など）
+- カスタム PDF テンプレートのデザイン
+- テンプレートの JSON エクスポートとインポート
+- ベース PDF の変更機能
+- 多言語対応
+- AI によるテンプレート生成サポート
+
+## 技術スタック
+
+- [Next.js](https://nextjs.org/) - React フレームワーク
+- [Tailwind CSS](https://tailwindcss.com/) - スタイリング
+- [PDF-me](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
+- [Radix UI](https://www.radix-ui.com/) - アクセシブルな UI コンポーネント
+- [OpenRouter](https://openrouter.ai/) - AI テンプレート生成用 API
+
+## はじめに
+
+### 必要条件
+
+- Node.js 18 以上
+- npm または yarn
+- OpenRouter API キー
+
+### 環境変数の設定
+
+アプリケーションを実行するには、プロジェクトのルートディレクトリに `.env.local` ファイルを作成し、以下の環境変数を設定する必要があります：
+
+```
+# OpenRouter API Key（必須）
+OPENROUTER_API_KEY=あなたのOpenRouterAPIキー
+
+# Next.js public URL
+NEXT_PUBLIC_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+OpenRouter API キーは [OpenRouter 公式サイト](https://openrouter.ai/) から取得できます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### インストール
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+```bash
+# リポジトリをクローン
+git clone [リポジトリURL]
 
-## Learn More
+# プロジェクトディレクトリに移動
+cd pdf-create-app
 
-To learn more about Next.js, take a look at the following resources:
+# 依存関係をインストール
+npm install
+# または
+yarn install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 開発サーバーを起動
+npm run dev
+# または
+yarn dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+アプリケーションは http://localhost:3000 で実行されます。
 
-## Deploy on Vercel
+## 使い方
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. テンプレートプリセットを選択するか、カスタムテンプレートを作成します
+2. デザイナーインターフェースでテンプレートを編集します
+3. 必要に応じてベース PDF をアップロードします
+4. テンプレートを保存またはエクスポートします
+5. PDF を生成します
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### AI テンプレート生成機能
+
+AI テンプレート生成機能を使用するには：
+
+1. デザイナーインターフェースで「AI テンプレート生成」ボタンをクリックします
+2. 生成したいテンプレートの説明を入力するか、「ランダムプロンプト生成」ボタンをクリックします
+3. 「テンプレート生成」ボタンをクリックして AI にテンプレートを生成させます
+4. 生成されたテンプレートを確認し、「適用」ボタンをクリックして使用します
+
+この機能には OpenRouter API が使用されており、`.env.local` ファイルに有効な API キーが必要です。
+
+## ライセンス
+
+[使用しているライセンスを記載]
+
+## 謝辞
+
+- [PDF-me](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
+- [OpenRouter](https://openrouter.ai/) - AI モデルへのアクセスを提供
+- その他使用しているライブラリ・リソース
