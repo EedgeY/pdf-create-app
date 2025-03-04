@@ -15,7 +15,7 @@
 
 - [Next.js](https://nextjs.org/) - React フレームワーク
 - [Tailwind CSS](https://tailwindcss.com/) - スタイリング
-- [PDF-me](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
+- [PDFME](https://github.com/pdfme/pdfme) - PDF テンプレート生成ライブラリ
 - [Radix UI](https://www.radix-ui.com/) - アクセシブルな UI コンポーネント
 - [OpenRouter](https://openrouter.ai/) - AI テンプレート生成用 API
 
