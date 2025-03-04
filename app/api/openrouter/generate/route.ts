@@ -192,9 +192,9 @@ A4サイズ（210mm × 297mm）内での典型的なレイアウト区分：
     "characterSpacing": 0, // 文字間隔を追加
     "borderWidth": {
       "top": 0.2,
-      "right": 0.2,
+      "right": 0,
       "bottom": 0.2,
-      "left": 0.2
+      "left": 0
     },
     "padding": {
       "top": 3,
@@ -248,7 +248,7 @@ A4サイズ（210mm × 297mm）内での典型的なレイアウト区分：
   "position": {"x": number, "y": number},
   "width": number,
   "height": number,
-  "content": "string" // Base64画像データまたは動的なバインディング変数
+  "content": "string" // 空文字
 }
 \`
 

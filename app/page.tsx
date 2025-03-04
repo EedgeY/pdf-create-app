@@ -3,9 +3,8 @@ import { Suspense } from 'react';
 import DesinerApp from './components/Designer';
 
 export const metadata: Metadata = {
-  title: 'Inbox',
-  description:
-    'Automatically match incoming invoices or receipts to the correct transaction.',
+  title: 'pdfmeベースの帳票を作成',
+  description: 'pdfmeベースの帳票を作成ツール',
 };
 
 export default function Page() {
