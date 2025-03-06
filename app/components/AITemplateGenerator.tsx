@@ -39,7 +39,74 @@ export function AITemplateGenerator({
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>(models[3]); // デフォルトはdeepseek/deepseek-chat
+  const [selectedTemplateType, setSelectedTemplateType] = useState<string>(''); // テンプレートタイプの選択状態
+  const [selectedLocalStyle, setSelectedLocalStyle] = useState<string>(''); // ローカルスタイルの選択状態
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('日本語'); // 言語の選択状態（デフォルトは日本語）
+  const [selectedPageSize, setSelectedPageSize] = useState<string>('A4'); // ページサイズの選択状態（デフォルトはA4）
   const { toast } = useToast();
+
+  // テンプレートタイプのリスト
+  const templateTypes = [
+    '請求書',
+    '見積書',
+    '診断書',
+    '報告書',
+    '履歴書',
+    '契約書',
+    '証明書',
+    '申請書',
+    '議事録',
+    'カタログ',
+    '名刺',
+    'チラシ',
+    'メニュー表',
+    '予約表',
+    '案内状',
+  ];
+
+  // ローカルスタイルのリスト
+  const localStyles = [
+    '日本風',
+    'アメリカ風',
+    'ヨーロッパ風',
+    '中国風',
+    '韓国風',
+    'モダン',
+    'クラシック',
+    'ミニマル',
+    'カラフル',
+    'モノクロ',
+    'ビジネス',
+    'カジュアル',
+    'エレガント',
+  ];
+
+  // 言語のリスト
+  const languages = [
+    '日本語',
+    '英語',
+    '中国語',
+    '韓国語',
+    'フランス語',
+    'ドイツ語',
+    'スペイン語',
+    'イタリア語',
+    'ポルトガル語',
+    'ロシア語',
+    'アラビア語',
+  ];
+
+  // ページサイズのリスト
+  const pageSizes = [
+    'A4', // 210mm × 297mm
+    'A3', // 297mm × 420mm
+    'A5', // 148mm × 210mm
+    'B5', // 176mm × 250mm
+    'レター', // 215.9mm × 279.4mm
+    'リーガル', // 215.9mm × 355.6mm
+    '名刺', // 91mm × 55mm
+    'ハガキ', // 100mm × 148mm
+  ];
 
   // ランダムなプロンプトを生成する関数
   const generateRandomPrompt = async () => {
@@ -47,21 +114,16 @@ export function AITemplateGenerator({
     setError(null);
 
     try {
-      // ランダムな文書サイズを選択（A4が最も一般的なため、80%の確率でA4を選択）
-      const documentSizes = ['A4', 'A3', 'B5', 'レター', 'リーガル'];
-      const sizeRandom = Math.random();
-      const documentSize =
-        sizeRandom < 0.8
-          ? 'A4'
-          : documentSizes[Math.floor(Math.random() * documentSizes.length)];
-
       const response = await fetch('/api/openrouter/prompt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          documentSize,
+          documentSize: selectedPageSize, // 選択されたページサイズを送信
+          templateType: selectedTemplateType, // 選択されたテンプレートタイプを送信
+          localStyle: selectedLocalStyle, // 選択されたローカルスタイルを送信
+          language: selectedLanguage, // 選択された言語を送信
         }),
       });
 
@@ -108,6 +170,21 @@ export function AITemplateGenerator({
     setIsLoading(true);
     setError(null);
 
+    // ページサイズの寸法情報を定義
+    const pageSizeDimensions: Record<
+      string,
+      { width: number; height: number }
+    > = {
+      A4: { width: 210, height: 297 },
+      A3: { width: 297, height: 420 },
+      A5: { width: 148, height: 210 },
+      B5: { width: 176, height: 250 },
+      レター: { width: 215.9, height: 279.4 },
+      リーガル: { width: 215.9, height: 355.6 },
+      名刺: { width: 91, height: 55 },
+      ハガキ: { width: 100, height: 148 },
+    };
+
     try {
       const response = await fetch('/api/openrouter/generate', {
         method: 'POST',
@@ -117,7 +194,7 @@ export function AITemplateGenerator({
         body: JSON.stringify({
           prompt:
             prompt +
-            '\n\n重要：フォントは全てNotoSerifJP-Regularを使用してください。また、テーブルのcontentは必ず有効なJSON文字列（JSON.stringify()で文字列化した2次元配列）を設定してください。',
+            `\n\n重要：フォントは全てNotoSerifJP-Regularを使用してください。また、テーブルのcontentは必ず有効なJSON文字列（JSON.stringify()で文字列化した2次元配列）を設定してください。ページサイズは${selectedPageSize}（${pageSizeDimensions[selectedPageSize].width}mm × ${pageSizeDimensions[selectedPageSize].height}mm）です。`,
           model: selectedModel,
         }),
       });
@@ -158,8 +235,17 @@ export function AITemplateGenerator({
           parsedTemplate.basePdf = BLANK_PDF;
         }
 
-        // A4サイズを明示的に設定（ミリメートル単位）
-        parsedTemplate.size = { width: 210, height: 297 };
+        // 選択されたページサイズに基づいてサイズを設定
+        const selectedSize = pageSizeDimensions[selectedPageSize];
+        if (selectedSize) {
+          parsedTemplate.size = {
+            width: selectedSize.width,
+            height: selectedSize.height,
+          };
+        } else {
+          // デフォルトはA4
+          parsedTemplate.size = { width: 210, height: 297 };
+        }
 
         // schemasの構造を確認・修正
         if (!Array.isArray(parsedTemplate.schemas)) {
@@ -349,6 +435,72 @@ schema: [
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div>
+          <Label htmlFor='template-type-select'>テンプレートタイプ</Label>
+          <Select
+            value={selectedTemplateType}
+            onValueChange={setSelectedTemplateType}
+          >
+            <SelectTrigger id='template-type-select'>
+              <SelectValue placeholder='テンプレートタイプを選択' />
+            </SelectTrigger>
+            <SelectContent>
+              {templateTypes.map((type, index) => (
+                <SelectItem key={index} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className='mt-4'>
+          <Label htmlFor='page-size-select'>ページサイズ</Label>
+          <Select value={selectedPageSize} onValueChange={setSelectedPageSize}>
+            <SelectTrigger id='page-size-select'>
+              <SelectValue placeholder='ページサイズを選択' />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizes.map((size, index) => (
+                <SelectItem key={index} value={size}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className='mt-4'>
+          <Label htmlFor='local-style-select'>スタイル</Label>
+          <Select
+            value={selectedLocalStyle}
+            onValueChange={setSelectedLocalStyle}
+          >
+            <SelectTrigger id='local-style-select'>
+              <SelectValue placeholder='スタイルを選択' />
+            </SelectTrigger>
+            <SelectContent>
+              {localStyles.map((style, index) => (
+                <SelectItem key={index} value={style}>
+                  {style}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className='mt-4'>
+          <Label htmlFor='language-select'>言語</Label>
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <SelectTrigger id='language-select'>
+              <SelectValue placeholder='言語を選択' />
+            </SelectTrigger>
+            <SelectContent>
+              {languages.map((language, index) => (
+                <SelectItem key={index} value={language}>
+                  {language}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className='space-y-4'>
           <div className='relative'>
             <Label htmlFor='prompt'>プロンプト</Label>
@@ -403,24 +555,6 @@ schema: [
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
-          <div>
-            <h4 className='text-sm font-medium mb-2'>プロンプト例</h4>
-            <div className='flex flex-col gap-2 max-h-60 overflow-y-auto pr-2'>
-              {examplePrompts.map((examplePrompt, index) => (
-                <Button
-                  key={index}
-                  variant='outline'
-                  className='justify-start h-auto p-2 text-left whitespace-normal break-word '
-                  onClick={() => setPrompt(examplePrompt)}
-                >
-                  {examplePrompt.length > 150
-                    ? `${examplePrompt.substring(0, 150)}...`
-                    : examplePrompt}
-                </Button>
-              ))}
-            </div>
-          </div>
         </div>
       </CardContent>
       <CardFooter>
