@@ -26,6 +26,12 @@ import {
   radioGroup,
 } from '@pdfme/schemas';
 import plugins from './plugins';
+import {
+  getCertificate1,
+  getCertificate2,
+  getTemplateByKey,
+  getAllTemplates,
+} from './templates';
 
 const fontObjList = [
   {
@@ -40,8 +46,28 @@ const fontObjList = [
   },
   {
     fallback: false,
+    label: 'NotoSansKR-Regular',
+    url: '/fonts/NotoSansKR-Regular.ttf',
+  },
+  {
+    fallback: false,
     label: DEFAULT_FONT_NAME,
     data: getDefaultFont()[DEFAULT_FONT_NAME].data,
+  },
+  {
+    fallback: false,
+    label: 'RozhaOne-Regular',
+    url: '/fonts/RozhaOne-Regular.ttf',
+  },
+  {
+    fallback: false,
+    label: 'MeaCulpa-Regular',
+    url: '/fonts/MeaCulpa-Regular.ttf',
+  },
+  {
+    fallback: false,
+    label: 'MonsieurLaDoulaise-Regular',
+    url: '/fonts/MonsieurLaDoulaise-Regular.ttf',
   },
 ];
 
@@ -185,9 +211,32 @@ export const generatePDF = async (
     typeof (currentRef as Viewer | Form).getInputs === 'function'
       ? (currentRef as Viewer | Form).getInputs()
       : getInputFromTemplate(template);
-  const font = await getFontsData();
 
   try {
+    // フォントデータを取得
+    const font = await getFontsData();
+
+    // テンプレート内で使用されている各フォントが有効かチェック
+    if (template.schemas) {
+      template.schemas.forEach((schemaPage) => {
+        if (schemaPage) {
+          schemaPage.forEach((schema) => {
+            // fontNameプロパティを持つスキーマのみ処理
+            if (schema && typeof schema === 'object' && 'fontName' in schema) {
+              const fontName = schema.fontName as string;
+              if (fontName && !(fontName in font)) {
+                // 無効なフォントがある場合はデフォルトフォントに置き換え
+                console.warn(
+                  `Font "${fontName}" not found, using default font instead.`
+                );
+                schema.fontName = 'NotoSerifJP-Regular';
+              }
+            }
+          });
+        }
+      });
+    }
+
     const pdf = await generate({
       template,
       inputs,
@@ -204,7 +253,10 @@ export const generatePDF = async (
     });
     window.open(URL.createObjectURL(blob));
   } catch (e) {
-    alert(e + '\n\nCheck the console for full stack trace');
+    console.error('PDF生成エラー:', e);
+    alert(
+      `PDF生成中にエラーが発生しました: ${e}\n\n詳細はコンソールを確認してください。`
+    );
     throw e;
   }
 };
@@ -780,24 +832,32 @@ const getBlankTemplate = () =>
     basePdf: {
       width: 210,
       height: 297,
-      padding: [20, 10, 20, 10],
+      padding: [0, 0, 0, 0],
     },
   } as Template);
+
 export const getTemplatePresets = (): {
   key: string;
   label: string;
   template: () => Template;
-}[] => [
-  { key: 'invoice', label: 'Invoice', template: getInvoiceTemplate },
-
-  { key: 'blank', label: 'Blank', template: getBlankTemplate },
-  { key: 'custom', label: 'Custom', template: getBlankTemplate },
-];
+}[] => {
+  const allTemplates = getAllTemplates();
+  return allTemplates
+    .map((template) => ({
+      key: template.key,
+      label: template.label,
+      template: template.template,
+    }))
+    .concat([{ key: 'custom', label: 'Custom', template: getBlankTemplate }]);
+};
 
 export const getTemplateByPreset = (templatePreset: string): Template => {
-  const templatePresets = getTemplatePresets();
-  const preset = templatePresets.find(
-    (preset) => preset.key === templatePreset
-  );
-  return preset ? preset.template() : templatePresets[0].template();
+  if (!templatePreset) return getBlankTemplate();
+
+  try {
+    return getTemplateByKey(templatePreset);
+  } catch (error) {
+    console.error('テンプレートの取得に失敗しました:', error);
+    return getBlankTemplate();
+  }
 };

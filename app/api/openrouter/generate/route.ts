@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: 'system',
-              content: PROMPTLIST[1],
+              content: PROMPTLIST[0],
             },
             {
               role: 'user',

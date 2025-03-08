@@ -32,6 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import FloatingActionButtons from './FloatingActionButtons';
 
 const headerHeight = 80;
 
@@ -175,6 +176,116 @@ function DesinerApp() {
       setTemplatePreset(customTemplatePresetKey);
       setIsAIDialogOpen(false);
     }
+  };
+
+  // 新しい要素を追加するハンドラ
+  const handleAddElement = (elementOrElements: any | any[]) => {
+    if (designer.current) {
+      try {
+        const currentTemplate = designer.current.getTemplate();
+        const currentSchemas = currentTemplate.schemas;
+
+        // 現在のスキーマの最初のページに新しい要素を追加
+        if (currentSchemas.length > 0) {
+          const updatedSchemas = [...currentSchemas];
+
+          // 要素が配列（複数要素）の場合
+          if (Array.isArray(elementOrElements)) {
+            updatedSchemas[0] = [...updatedSchemas[0], ...elementOrElements];
+            console.log(`${elementOrElements.length}個の要素が追加されました`);
+          } else {
+            // 単一要素の場合
+            updatedSchemas[0] = [...updatedSchemas[0], elementOrElements];
+            console.log('要素が追加されました:', elementOrElements);
+          }
+
+          // テンプレートを更新
+          const updatedTemplate = {
+            ...currentTemplate,
+            schemas: updatedSchemas,
+          };
+
+          designer.current.updateTemplate(updatedTemplate);
+          setTemplatePreset(customTemplatePresetKey);
+        }
+      } catch (error) {
+        console.error('要素の追加中にエラーが発生しました:', error);
+        alert('要素の追加中にエラーが発生しました');
+      }
+    }
+  };
+
+  // テーブル要素を追加する関数
+  const handleAddTable = () => {
+    const tableElement = {
+      name: 'sample_table',
+      type: 'table',
+      position: { x: 20, y: 20 },
+      width: 160,
+      height: 80,
+      content: '[[null,null,null],[null,null,null],[null,null,null]]',
+      showHead: true,
+      head: ['項目', '単価', '数量'],
+      headWidthPercentages: [33.3, 33.3, 33.4],
+      fontName: 'NotoSansJP-Regular',
+      tableStyles: {
+        borderWidth: 1,
+        borderColor: '#000000',
+      },
+      headStyles: {
+        fontName: 'NotoSansJP-Regular',
+        fontSize: 10,
+        alignment: 'center',
+        verticalAlignment: 'middle',
+        fontColor: '#000000',
+        backgroundColor: '#f5f5f5',
+        lineHeight: 1.2,
+        characterSpacing: 0,
+        borderWidth: {
+          top: 1,
+          right: 1,
+          bottom: 1,
+          left: 1,
+        },
+        padding: {
+          top: 2,
+          right: 2,
+          bottom: 2,
+          left: 2,
+        },
+      },
+      bodyStyles: {
+        fontName: 'NotoSansJP-Regular',
+        fontSize: 10,
+        alignment: 'left',
+        verticalAlignment: 'middle',
+        fontColor: '#000000',
+        backgroundColor: '#FFFFFF',
+        lineHeight: 1.2,
+        characterSpacing: 0,
+        borderWidth: {
+          top: 0,
+          right: 1,
+          bottom: 1,
+          left: 1,
+        },
+        padding: {
+          top: 2,
+          right: 2,
+          bottom: 2,
+          left: 2,
+        },
+      },
+      columnStyles: {
+        alignment: {
+          '0': 'left',
+          '1': 'right',
+          '2': 'center',
+        },
+      },
+    };
+
+    handleAddElement(tableElement);
   };
 
   if (designerRef.current !== prevDesignerRef) {
@@ -334,6 +445,12 @@ function DesinerApp() {
         style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }}
       >
         <span />
+      </div>
+      <div className='relative z-50'>
+        <FloatingActionButtons
+          onApplyElement={handleAddElement}
+          designerRef={designer}
+        />
       </div>
     </div>
   );
