@@ -25,13 +25,8 @@ import {
   checkbox,
   radioGroup,
 } from '@pdfme/schemas';
-import plugins from './plugins';
-import {
-  getCertificate1,
-  getCertificate2,
-  getTemplateByKey,
-  getAllTemplates,
-} from './templates';
+import { plugins } from './plugins';
+import { getTemplateByKey, getAllTemplates } from './templates';
 
 const fontObjList = [
   {
@@ -160,7 +155,7 @@ export const getPlugins = () => {
     Ellipse: ellipse,
     Image: image,
     SVG: svg,
-    Signature: plugins.signature,
+    ...plugins,
     QR: barcodes.qrcode,
     DateTime: dateTime,
     Date: date,

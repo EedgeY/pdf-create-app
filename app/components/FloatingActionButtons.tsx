@@ -3,15 +3,22 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Type,
-  Table2,
+  Type as TypeIcon,
+  Table as TableIcon,
   FileText,
   Smartphone,
   CreditCard,
   Loader2,
   Palette,
-  Image,
+  Image as ImageIcon,
   LayoutGrid,
+  BarChart3,
+  LayoutPanelTop,
+  Layers as LayersIcon,
+  RefreshCw,
+  SquareStack,
+  MinusIcon,
+  PlusIcon,
 } from 'lucide-react';
 import {
   Popover,
@@ -33,6 +40,12 @@ import {
 } from '@/components/ui/select';
 import { models } from '@/app/helper';
 import { Switch } from '@/components/ui/switch';
+import { StreamingDialog } from './StreamingDialog';
+import ChartGenerator from './chart-generator';
+import { Input } from '@/components/ui/input';
+
+// 画像URLのキャッシュ用のMap（グローバルスコープに定義）
+const imageCache = new Map<string, string>();
 
 // 一般的な用紙サイズ定義（単位: mm）
 const PAPER_SIZES = {
@@ -50,65 +63,23 @@ const PAPER_SIZES = {
 const COLOR_PATTERNS = {
   default: {
     label: 'デフォルト',
-    primary: '#000000',
-    secondary: '#ffffff',
-    accent: '#cccccc',
+    primary: '#333333',
+    secondary: '#666666',
+    accent: '#999999',
+  },
+  dark: {
+    label: 'ダーク',
+    primary: '#121212',
+    secondary: '#333333',
+    accent: '#555555',
   },
   blue: {
     label: 'ブルー',
-    primary: '#1a365d',
-    secondary: '#ebf8ff',
-    accent: '#3182ce',
+    primary: '#0077cc',
+    secondary: '#3399ff',
+    accent: '#66ccff',
   },
-  green: {
-    label: 'グリーン',
-    primary: '#1c4532',
-    secondary: '#f0fff4',
-    accent: '#38a169',
-  },
-  red: {
-    label: 'レッド',
-    primary: '#63171b',
-    secondary: '#fff5f5',
-    accent: '#e53e3e',
-  },
-  purple: {
-    label: 'パープル',
-    primary: '#44337a',
-    secondary: '#faf5ff',
-    accent: '#805ad5',
-  },
-  orange: {
-    label: 'オレンジ',
-    primary: '#7b341e',
-    secondary: '#fffaf0',
-    accent: '#dd6b20',
-  },
-  teal: {
-    label: 'ティール',
-    primary: '#234e52',
-    secondary: '#e6fffa',
-    accent: '#38b2ac',
-  },
-  gray: {
-    label: 'グレー',
-    primary: '#1a202c',
-    secondary: '#f7fafc',
-    accent: '#718096',
-  },
-  corporate: {
-    label: 'コーポレート',
-    primary: '#2c5282',
-    secondary: '#f8fafc',
-    accent: '#4299e1',
-  },
-  elegant: {
-    label: 'エレガント',
-    primary: '#1a202c',
-    secondary: '#fff8dc',
-    accent: '#d69e2e',
-  },
-} as const;
+};
 
 type ColorPatternKey = keyof typeof COLOR_PATTERNS;
 type PaperSizeKey = keyof typeof PAPER_SIZES;
@@ -131,6 +102,18 @@ interface FloatingActionButtonsProps {
   designerRef: React.MutableRefObject<any>;
 }
 
+interface ChartDataItem {
+  name: string;
+  value: number;
+}
+
+// 画像取得のためのインターフェース
+interface URLImageData {
+  url: string;
+  count: number;
+  prompt: string;
+}
+
 export function FloatingActionButtons({
   onApplyElement,
   designerRef,
@@ -141,6 +124,8 @@ export function FloatingActionButtons({
   const [isSvgPopoverOpen, setIsSvgPopoverOpen] = useState(false);
   const [isV0PopoverOpen, setIsV0PopoverOpen] = useState(false);
   const [isLayoutEditPopoverOpen, setIsLayoutEditPopoverOpen] = useState(false);
+  // 画像URL取得のためのポップオーバー状態
+  const [isUrlImagePopoverOpen, setIsUrlImagePopoverOpen] = useState(false);
   const [selectedPaperSize, setSelectedPaperSize] =
     useState<PaperSizeKey>('A4');
   const [svgIcons, setSvgIcons] = useState<SvgIcon[]>([]);
@@ -151,7 +136,9 @@ export function FloatingActionButtons({
   const [tablePrompt, setTablePrompt] = useState('');
   const [v0Prompt, setV0Prompt] = useState('');
   const [layoutEditPrompt, setLayoutEditPrompt] = useState('');
-  const [selectedTextModel, setSelectedTextModel] = useState(models[2]);
+  const [selectedTextModel, setSelectedTextModel] = useState(
+    'google/gemini-2.0-flash-001'
+  ); // デフォルトモデル
   const [selectedTableModel, setSelectedTableModel] = useState(models[2]);
   const [selectedV0Model, setSelectedV0Model] = useState(models[2]);
   const [selectedLayoutEditModel, setSelectedLayoutEditModel] = useState(
@@ -166,7 +153,7 @@ export function FloatingActionButtons({
   const [v0Error, setV0Error] = useState<string | null>(null);
   const [layoutEditError, setLayoutEditError] = useState<string | null>(null);
   const [selectedTextColorPattern, setSelectedTextColorPattern] =
-    useState<ColorPatternKey>('default');
+    useState('default'); // デフォルトカラー
   const [selectedTableColorPattern, setSelectedTableColorPattern] =
     useState<ColorPatternKey>('default');
   const [selectedV0ColorPattern, setSelectedV0ColorPattern] =
@@ -177,6 +164,21 @@ export function FloatingActionButtons({
     useState('standard');
   const [elementSpacing, setElementSpacing] = useState('standard'); // 'dense', 'standard', 'wide'
   const [autoSizeElements, setAutoSizeElements] = useState(true);
+
+  // ストリーミング用の状態
+  const [textStreamData, setTextStreamData] = useState('');
+  const [isTextStreamVisible, setIsTextStreamVisible] = useState(false);
+
+  // チャート関連の状態を追加
+  const [isChartPopoverOpen, setIsChartPopoverOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // 画像URL関連の状態
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageCount, setImageCount] = useState(1);
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -257,18 +259,22 @@ export function FloatingActionButtons({
     setIsTablePopoverOpen(false);
   };
 
-  // テキスト要素生成
+  // テキスト生成関数
   const generateTextElement = async () => {
     if (!textPrompt.trim()) {
       setTextError('プロンプトを入力してください');
       return;
     }
 
-    setIsTextLoading(true);
-    setTextError(null);
-
     try {
-      const response = await fetch('/api/openrouter/generate-text', {
+      setIsTextLoading(true);
+      setTextError(null);
+      setTextStreamData('');
+      setIsTextStreamVisible(true);
+      setIsTextPopoverOpen(false);
+
+      // APIリクエスト
+      const response = await fetch('/api/openrouter/generate-text-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -276,47 +282,122 @@ export function FloatingActionButtons({
         body: JSON.stringify({
           prompt: textPrompt,
           model: selectedTextModel,
-          colorPattern: COLOR_PATTERNS[selectedTextColorPattern],
+          colorPattern:
+            COLOR_PATTERNS[
+              selectedTextColorPattern as keyof typeof COLOR_PATTERNS
+            ],
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'テキスト要素生成に失敗しました');
+        throw new Error(`APIエラー: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('APIレスポンス:', data);
-
-      if (!data.elements) {
-        throw new Error('テキスト要素を生成できませんでした');
+      if (!response.body) {
+        throw new Error('レスポンスボディがありません');
       }
 
-      // 要素を適用
-      handleApplyElement(data.elements);
+      // SSEリーダーを作成
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedData = '';
+      let streamingFinished = false;
 
-      toast({
-        title: 'テキスト要素生成完了',
-        description: `${data.model}モデルを使用してテキスト要素を生成しました`,
-        variant: 'default',
-      });
+      while (!streamingFinished) {
+        const { done, value } = await reader.read();
 
-      // 生成後にプロンプトをクリア
-      setTextPrompt('');
-      setIsTextPopoverOpen(false);
-    } catch (err: any) {
-      console.error('テキスト要素生成エラー:', err);
+        if (done) {
+          streamingFinished = true;
+          break;
+        }
+
+        // バイナリデータをテキストに変換
+        const chunk = decoder.decode(value, { stream: true });
+
+        // SSEメッセージを解析
+        const lines = chunk.split('\n\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+
+            if (data === '[DONE]') {
+              // ストリーミング完了
+              streamingFinished = true;
+            } else {
+              try {
+                const parsedData = JSON.parse(data);
+                // JSONデータをそのまま表示用にセット
+                setTextStreamData((prev) => {
+                  // 完全な累積コンテンツがある場合はそれを使用
+                  if (parsedData.content) {
+                    return parsedData.content;
+                  }
+                  // デルタのみがある場合は追加
+                  if (parsedData.delta) {
+                    return prev + parsedData.delta;
+                  }
+                  return prev;
+                });
+
+                // 累積データを更新
+                accumulatedData =
+                  parsedData.content ||
+                  accumulatedData + (parsedData.delta || '');
+              } catch (err) {
+                console.error('ストリーミングデータの解析エラー:', err, data);
+              }
+            }
+          }
+        }
+      }
+
+      console.log('テキスト生成完了');
+    } catch (error) {
+      console.error('テキスト生成エラー:', error);
       setTextError(
-        err instanceof Error ? err.message : '不明なエラーが発生しました'
+        error instanceof Error ? error.message : '不明なエラーが発生しました'
       );
       toast({
         title: 'エラー',
         description:
-          err instanceof Error ? err.message : '不明なエラーが発生しました',
+          error instanceof Error ? error.message : '不明なエラーが発生しました',
         variant: 'destructive',
       });
     } finally {
       setIsTextLoading(false);
+    }
+  };
+
+  // テキスト要素適用ハンドラ
+  const applyTextElements = (normalizedData?: string) => {
+    try {
+      const dataToProcess = normalizedData || textStreamData;
+      if (!dataToProcess) return;
+
+      // JSONをパース
+      const parsedData = JSON.parse(dataToProcess);
+
+      // 要素配列を作成
+      const elements = Array.isArray(parsedData) ? parsedData : [parsedData];
+
+      // 要素を適用
+      onApplyElement(elements);
+
+      toast({
+        title: 'テキスト要素を追加しました',
+        description: `${elements.length}個の要素がPDFデザイナーに追加されました`,
+      });
+
+      // 入力をリセット
+      setTextPrompt('');
+      setTextStreamData('');
+    } catch (error) {
+      console.error('テキスト要素適用エラー:', error);
+      toast({
+        title: 'エラー',
+        description: 'テキスト要素の適用に失敗しました',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -721,33 +802,293 @@ export function FloatingActionButtons({
     { value: 'wide', label: '広め間隔' },
   ];
 
+  // チャートデータからチャート要素を生成する関数
+  const handleChartGenerated = (data: ChartDataItem[], chartType: string) => {
+    // チャートデータとタイプを基にスキーマを作成
+    const chartElement = {
+      type: 'chart',
+      name: getChartName(chartType, data),
+      chartType: chartType,
+      chartData: JSON.stringify(data),
+      chartOptions: JSON.stringify({}),
+      content: '',
+      position: { x: 20, y: 20 },
+      width: 150,
+      height: 100,
+    };
+
+    // 要素を適用
+    onApplyElement(chartElement);
+
+    // ポップオーバーを閉じる
+    setIsChartPopoverOpen(false);
+
+    // 成功メッセージを表示
+    toast({
+      title: 'チャートを追加しました',
+      description: `${chartType}タイプのチャートが生成されました（${data.length}項目）`,
+    });
+  };
+
+  // チャートの名前を生成
+  const getChartName = (chartType: string, data: ChartDataItem[]): string => {
+    // データの内容から適切な名前を推測
+    let nameHint = '';
+
+    if (data.length > 0) {
+      // 最初の数項目をヒントとして使用
+      const sampleNames = data
+        .slice(0, Math.min(3, data.length))
+        .map((item) => item.name);
+      nameHint = sampleNames.join('、');
+
+      if (data.length > 3) {
+        nameHint += '...';
+      }
+    }
+
+    switch (chartType) {
+      case 'bar':
+        return `棒グラフ: ${nameHint}`;
+      case 'line':
+        return `折れ線グラフ: ${nameHint}`;
+      case 'pie':
+        return `円グラフ: ${nameHint}`;
+      default:
+        return `チャート: ${nameHint}`;
+    }
+  };
+
+  // 画像URLをデータURLに変換する関数
+  const fetchImageAsDataURL = async (
+    url: string,
+    retryCount = 0
+  ): Promise<string | null> => {
+    // キャッシュにある場合はそれを返す
+    if (imageCache.has(url)) {
+      console.log(`キャッシュされた画像を使用: ${url}`);
+      return imageCache.get(url)!;
+    }
+
+    // すでにデータURLの場合はそのまま返す
+    if (url.startsWith('data:')) {
+      return url;
+    }
+
+    // FAL AI画像の不具合対策のため、リトライカウントが3以上の場合は
+    // デフォルトのプレースホルダー画像を返す
+    const MAX_RETRIES = 3;
+    if (retryCount >= MAX_RETRIES) {
+      console.warn(`最大リトライ回数に達しました: ${url}`);
+      // プレースホルダー画像（透過画像）のデータURL
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bQQ6CMBRF0Y/7X6dxIH9AFBqo5ZyZScw1YdCXEHIcAAAAAAAAAAAAAAAAwL+7nO24P86+xdfdrq+dYvZ9uXe+3PsFhEgJkRIiJURKiJQQKSFSQqSESAmREiIlREqIlBApIVJCpIRICZESIiVESoiUECkhUkKkhEgJkRIiJURKiJQQKSFSQqSESAmREiIlREqIlBApIVJCpIRICZESIiVESoiUECkhUkKkhEgJkRIiJURKiNTsD9S4zbexn/1iOHtutNkvi82+r9k/MphNiJQQKSFSQqSESAmRWiLkNnm/5TsLAAAAAAAAAAAAAAAAYGcvn9kWyq9Yb3wAAAAASUVORK5CYII=';
+    }
+
+    try {
+      // CORSエラー対策
+      const corsProxy = 'https://corsproxy.io/?';
+      const targetUrl = `${corsProxy}${encodeURIComponent(url)}`;
+
+      console.log(`画像を取得中: ${targetUrl} (リトライ: ${retryCount})`);
+      const response = await fetch(targetUrl, {
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          Accept: 'image/*',
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`HTTP エラー: ${response.status} for URL: ${url}`);
+
+        // 404エラーの場合は、FAL AI画像がまだ準備できていないため、再試行
+        if (
+          response.status === 404 &&
+          url.includes('fal.media') &&
+          retryCount < MAX_RETRIES
+        ) {
+          console.log(
+            `404エラーのため${
+              retryCount + 1
+            }回目の再試行を${1500}ms後に実行します`
+          );
+
+          // 再試行の間隔を指数関数的に増加させる（1.5秒、3秒、6秒...）
+          const retryDelay = 1500 * Math.pow(2, retryCount);
+
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          return fetchImageAsDataURL(url, retryCount + 1);
+        }
+
+        throw new Error(`HTTP エラー: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          if (!base64data) {
+            reject(new Error('画像をbase64に変換できませんでした'));
+            return;
+          }
+          // キャッシュに保存
+          imageCache.set(url, base64data);
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('画像の取得エラー:', error);
+
+      // エラー時にリトライカウントが最大未満の場合は再試行
+      if (url.includes('fal.media') && retryCount < MAX_RETRIES) {
+        console.log(
+          `エラーのため${retryCount + 1}回目の再試行を${2000}ms後に実行します`
+        );
+
+        // エラーの場合は少し長めの遅延
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        return fetchImageAsDataURL(url, retryCount + 1);
+      }
+
+      return null;
+    }
+  };
+
+  // 画像生成要素を生成する関数
+  const generateUrlImageElements = async () => {
+    if (!imagePrompt.trim()) {
+      setImageError('画像の説明（プロンプト）を入力してください');
+      return;
+    }
+
+    if (imageCount < 1 || imageCount > 4) {
+      setImageError('画像枚数は1〜4枚の間で指定してください');
+      return;
+    }
+
+    setIsImageLoading(true);
+    setImageError(null);
+
+    try {
+      // FAL AIのAPIを呼び出して画像を生成
+      const response = await fetch('/api/fal-ai/generate-images', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: imagePrompt,
+          count: imageCount,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '画像生成に失敗しました');
+      }
+
+      const data = await response.json();
+      console.log('FAL AI応答結果:', data);
+
+      // 画像URLをデータURLに変換
+      const imageElements = [];
+      for (let i = 0; i < data.images.length; i++) {
+        const imageUrl = data.images[i];
+        console.log(`画像URL ${i + 1}: ${imageUrl}`);
+
+        // プレースホルダー要素を作成
+        const element = {
+          type: 'urlimage',
+          name: `画像 ${i + 1}`,
+          imageUrl: imageUrl,
+          // 一時的なプレースホルダー画像を設定
+          content:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAA50lEQVR4nO3bQQ6CMBRF0Y/7X6dxIH9AFBqo5ZyZScw1YdCXEHIcAAAAAAAAAAAAAAAAwL+7nO24P86+xdfdrq+dYvZ9uXe+3PsFhEgJkRIiJURKiJQQKSFSQqSESAmREiIlREqIlBApIVJCpIRICZESIiVESoiUECkhUkKkhEgJkRIiJURKiJQQKSFSQqSESAmREiIlREqIlBApIVJCpIRICZESIiVESoiUECkhUkKkhEgJkRIiJURKiNTsD9S4zbexn/1iOHtutNkvi82+r9k/MphNiJQQKSFSQqSESAmRWiLkNnm/5TsLAAAAAAAAAAAAAAAAYGcvn9kWyq9Yb3wAAAAASUVORK5CYII=',
+          position: {
+            x: 20 + (i % 2) * 100,
+            y: 20 + Math.floor(i / 2) * 100,
+          },
+          width: 80,
+          height: 80,
+        };
+
+        imageElements.push(element);
+
+        // 要素を先に追加し、バックグラウンドで実際の画像を取得
+        // このアプローチにより、ユーザーは画像の読み込みを待つ必要がない
+        setTimeout(async () => {
+          try {
+            // 実際の画像を非同期で取得
+            const dataUrl = await fetchImageAsDataURL(imageUrl);
+            if (dataUrl) {
+              console.log(`画像 ${i + 1} を正常に取得しました`);
+              // コンテンツを更新（これはDesignerコンポーネントの内部状態を更新するために必要）
+              if (designerRef.current) {
+                designerRef.current.updateSchema(element.name, {
+                  ...element,
+                  content: dataUrl,
+                });
+              }
+            }
+          } catch (err) {
+            console.error(`画像 ${i + 1} の取得に失敗しました:`, err);
+          }
+        }, 100);
+      }
+
+      // 要素を適用（プレースホルダー付き）
+      handleApplyElement(imageElements);
+
+      // 成功メッセージを表示
+      toast({
+        title: '画像を追加しました',
+        description: `${imageElements.length}枚の画像を配置しました（バックグラウンドで読み込み中）`,
+      });
+
+      // ポップオーバーを閉じる
+      setIsUrlImagePopoverOpen(false);
+
+      // 入力をリセット
+      setImagePrompt('');
+      setImageCount(1);
+    } catch (err: any) {
+      console.error('画像生成エラー:', err);
+      setImageError(
+        err instanceof Error ? err.message : '不明なエラーが発生しました'
+      );
+      toast({
+        title: 'エラー',
+        description:
+          err instanceof Error ? err.message : '不明なエラーが発生しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImageLoading(false);
+    }
+  };
+
   return (
-    <div className='fixed right-4 bottom-4 flex flex-col items-end space-y-2'>
-      <Popover open={isTextPopoverOpen} onOpenChange={setIsTextPopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size='sm'
-            className='rounded-full bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1'
-          >
-            <Type className='h-5 w-5' />
-            <span>テキスト</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className='w-80' align='center'>
-          <div className='space-y-3'>
-            <h3 className='font-medium'>テキスト生成</h3>
+    <div className='fixed bottom-6 right-6 flex flex-col gap-2 z-50'>
+      <div className='flex flex-col gap-2 items-end'>
+        <Popover open={isTextPopoverOpen} onOpenChange={setIsTextPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              className='w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-primary hover:bg-primary/90'
+              size='icon'
+              variant='default'
+            >
+              <TypeIcon className='h-5 w-5' />
+              <span className='sr-only'>テキスト追加</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-80 p-4' side='left'>
+            <div className='space-y-4'>
+              <h3 className='font-medium text-sm'>テキスト生成</h3>
 
-            {textError && (
-              <Alert variant='destructive' className='py-2'>
-                <AlertCircle className='h-4 w-4' />
-                <AlertDescription className='text-xs'>
-                  {textError}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className='space-y-3'>
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='text-model' className='text-xs'>
                   AIモデル
                 </Label>
@@ -755,618 +1096,283 @@ export function FloatingActionButtons({
                   value={selectedTextModel}
                   onValueChange={setSelectedTextModel}
                 >
-                  <SelectTrigger className='w-full h-8 text-xs'>
-                    <SelectValue placeholder='AIモデルを選択' />
+                  <SelectTrigger id='text-model' className='text-xs'>
+                    <SelectValue placeholder='モデルを選択' />
                   </SelectTrigger>
                   <SelectContent>
-                    {models.map((model) => (
-                      <SelectItem key={model} value={model} className='text-xs'>
-                        {model}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value='google/gemini-2.0-flash-001'>
+                      Gemini 2.0 Flash
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor='text-color-pattern' className='text-xs'>
+              <div className='space-y-2'>
+                <Label htmlFor='text-color' className='text-xs'>
                   カラーパターン
                 </Label>
                 <Select
                   value={selectedTextColorPattern}
                   onValueChange={(value) =>
-                    setSelectedTextColorPattern(value as ColorPatternKey)
+                    setSelectedTextColorPattern(
+                      value as keyof typeof COLOR_PATTERNS
+                    )
                   }
                 >
-                  <SelectTrigger className='w-full h-8 text-xs'>
-                    <SelectValue placeholder='カラーパターンを選択' />
+                  <SelectTrigger id='text-color' className='text-xs'>
+                    <SelectValue placeholder='カラーを選択' />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(COLOR_PATTERNS) as ColorPatternKey[]).map(
-                      (key) => (
-                        <SelectItem key={key} value={key} className='text-xs'>
-                          <div className='flex items-center'>
-                            <div className='flex mr-2'>
-                              <div
-                                className='w-3 h-3 rounded-full mr-1'
-                                style={{
-                                  backgroundColor: COLOR_PATTERNS[key].primary,
-                                }}
-                              />
-                              <div
-                                className='w-3 h-3 rounded-full mr-1'
-                                style={{
-                                  backgroundColor: COLOR_PATTERNS[key].accent,
-                                }}
-                              />
-                              <div
-                                className='w-3 h-3 rounded-full'
-                                style={{
-                                  backgroundColor:
-                                    COLOR_PATTERNS[key].secondary,
-                                }}
-                              />
-                            </div>
-                            {COLOR_PATTERNS[key].label}
+                    {Object.entries(COLOR_PATTERNS).map(([key, value]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className='flex items-center'>
+                          <div className='flex mr-2'>
+                            <div
+                              className='w-3 h-3 rounded-full mr-1'
+                              style={{ backgroundColor: value.primary }}
+                            />
+                            <div
+                              className='w-3 h-3 rounded-full'
+                              style={{ backgroundColor: value.accent }}
+                            />
                           </div>
-                        </SelectItem>
-                      )
-                    )}
+                          {value.label}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='text-prompt' className='text-xs'>
                   プロンプト
                 </Label>
                 <Textarea
                   id='text-prompt'
+                  placeholder='生成したいテキスト要素について教えてください'
                   value={textPrompt}
                   onChange={(e) => setTextPrompt(e.target.value)}
-                  placeholder='生成したいテキスト要素の説明'
-                  className='min-h-[80px] text-sm'
+                  className='h-24 text-xs'
                 />
               </div>
 
-              <div className='flex justify-between gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setTextPrompt('')}
-                  disabled={isTextLoading}
-                >
-                  クリア
-                </Button>
+              <div className='flex justify-end'>
                 <Button
                   size='sm'
-                  onClick={generateTextElement}
                   disabled={isTextLoading || !textPrompt.trim()}
+                  onClick={generateTextElement}
+                  className='text-xs'
                 >
                   {isTextLoading ? (
                     <>
-                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      生成中...
+                      <Loader2 className='mr-2 h-3 w-3 animate-spin' />
+                      生成中
                     </>
                   ) : (
-                    '生成'
+                    <>生成</>
                   )}
                 </Button>
               </div>
             </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+          </PopoverContent>
+        </Popover>
 
-      <Popover open={isTablePopoverOpen} onOpenChange={setIsTablePopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size='sm'
-            className='rounded-full bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1'
-          >
-            <Table2 className='h-5 w-5' />
-            <span>テーブル</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className='w-80' align='center'>
-          <div className='space-y-3'>
-            <h3 className='font-medium'>テーブル生成</h3>
+        {/* ストリーミングダイアログ */}
+        <StreamingDialog
+          open={isTextStreamVisible}
+          onOpenChange={setIsTextStreamVisible}
+          streamData={textStreamData}
+          isLoading={isTextLoading}
+          onApply={applyTextElements}
+          title='テキスト要素の生成'
+          errorMessage={textError}
+        />
 
-            {tableError && (
-              <Alert variant='destructive' className='py-2'>
-                <AlertCircle className='h-4 w-4' />
-                <AlertDescription className='text-xs'>
-                  {tableError}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className='space-y-3'>
-              <div>
-                <Label htmlFor='table-model' className='text-xs'>
-                  AIモデル
-                </Label>
-                <Select
-                  value={selectedTableModel}
-                  onValueChange={setSelectedTableModel}
-                >
-                  <SelectTrigger className='w-full h-8 text-xs'>
-                    <SelectValue placeholder='AIモデルを選択' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((model) => (
-                      <SelectItem key={model} value={model} className='text-xs'>
-                        {model}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor='table-color-pattern' className='text-xs'>
-                  カラーパターン
-                </Label>
-                <Select
-                  value={selectedTableColorPattern}
-                  onValueChange={(value) =>
-                    setSelectedTableColorPattern(value as ColorPatternKey)
-                  }
-                >
-                  <SelectTrigger className='w-full h-8 text-xs'>
-                    <SelectValue placeholder='カラーパターンを選択' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(COLOR_PATTERNS) as ColorPatternKey[]).map(
-                      (key) => (
-                        <SelectItem key={key} value={key} className='text-xs'>
-                          <div className='flex items-center'>
-                            <div className='flex mr-2'>
-                              <div
-                                className='w-3 h-3 rounded-full mr-1'
-                                style={{
-                                  backgroundColor: COLOR_PATTERNS[key].primary,
-                                }}
-                              />
-                              <div
-                                className='w-3 h-3 rounded-full mr-1'
-                                style={{
-                                  backgroundColor: COLOR_PATTERNS[key].accent,
-                                }}
-                              />
-                              <div
-                                className='w-3 h-3 rounded-full'
-                                style={{
-                                  backgroundColor:
-                                    COLOR_PATTERNS[key].secondary,
-                                }}
-                              />
-                            </div>
-                            {COLOR_PATTERNS[key].label}
-                          </div>
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
+        <Popover open={isTablePopoverOpen} onOpenChange={setIsTablePopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              className='w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-primary hover:bg-primary/90'
+              size='icon'
+              variant='default'
+            >
+              <TableIcon className='h-5 w-5' />
+              <span className='sr-only'>テーブル追加</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-80 p-4' side='left'>
+            <div className='space-y-4'>
+              <h3 className='font-medium text-sm'>テーブル生成</h3>
+              <div className='space-y-2'>
                 <Label htmlFor='table-prompt' className='text-xs'>
                   プロンプト
                 </Label>
                 <Textarea
                   id='table-prompt'
+                  placeholder='生成したいテーブルについて教えてください'
                   value={tablePrompt}
                   onChange={(e) => setTablePrompt(e.target.value)}
-                  placeholder='生成したいテーブル要素の説明'
-                  className='min-h-[80px] text-sm'
+                  className='h-24 text-xs'
                 />
               </div>
 
-              <div className='flex justify-between gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setTablePrompt('')}
-                  disabled={isTableLoading}
-                >
-                  クリア
-                </Button>
+              <div className='flex justify-end'>
                 <Button
                   size='sm'
-                  onClick={generateTableElement}
                   disabled={isTableLoading || !tablePrompt.trim()}
+                  onClick={generateTableElement}
+                  className='text-xs'
                 >
                   {isTableLoading ? (
                     <>
-                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      生成中...
+                      <Loader2 className='mr-2 h-3 w-3 animate-spin' />
+                      生成中
                     </>
                   ) : (
-                    '生成'
+                    <>生成</>
                   )}
                 </Button>
               </div>
             </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+          </PopoverContent>
+        </Popover>
 
-      <Popover open={isV0PopoverOpen} onOpenChange={setIsV0PopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size='sm'
-            className='rounded-full bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1'
-          >
-            <Table2 className='h-5 w-5' />
-            <span>v0</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className='w-80' align='center'>
-          <div className='space-y-3'>
-            <h3 className='font-medium'>v0</h3>
-
-            {v0Error && (
-              <Alert variant='destructive' className='py-2'>
-                <AlertCircle className='h-4 w-4' />
-                <AlertDescription className='text-xs'>
-                  {v0Error}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className='space-y-3'>
-              <div>
-                <Label htmlFor='table-model' className='text-xs'>
-                  AIモデル
-                </Label>
-                <Select
-                  value={selectedV0Model}
-                  onValueChange={setSelectedV0Model}
-                >
-                  <SelectTrigger className='w-full h-8 text-xs'>
-                    <SelectValue placeholder='AIモデルを選択' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.map((model) => (
-                      <SelectItem key={model} value={model} className='text-xs'>
-                        {model}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor='table-color-pattern' className='text-xs'>
-                  カラーパターン
-                </Label>
-                <Select
-                  value={selectedV0ColorPattern}
-                  onValueChange={(value) =>
-                    setSelectedV0ColorPattern(value as ColorPatternKey)
-                  }
-                >
-                  <SelectTrigger className='w-full h-8 text-xs'>
-                    <SelectValue placeholder='カラーパターンを選択' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(COLOR_PATTERNS) as ColorPatternKey[]).map(
-                      (key) => (
-                        <SelectItem key={key} value={key} className='text-xs'>
-                          <div className='flex items-center'>
-                            <div className='flex mr-2'>
-                              <div
-                                className='w-3 h-3 rounded-full mr-1'
-                                style={{
-                                  backgroundColor: COLOR_PATTERNS[key].primary,
-                                }}
-                              />
-                              <div
-                                className='w-3 h-3 rounded-full mr-1'
-                                style={{
-                                  backgroundColor: COLOR_PATTERNS[key].accent,
-                                }}
-                              />
-                              <div
-                                className='w-3 h-3 rounded-full'
-                                style={{
-                                  backgroundColor:
-                                    COLOR_PATTERNS[key].secondary,
-                                }}
-                              />
-                            </div>
-                            {COLOR_PATTERNS[key].label}
-                          </div>
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor='table-prompt' className='text-xs'>
-                  プロンプト
-                </Label>
-                <Textarea
-                  id='table-prompt'
-                  value={v0Prompt}
-                  onChange={(e) => setV0Prompt(e.target.value)}
-                  placeholder='生成したいテーブル要素の説明'
-                  className='min-h-[80px] text-sm'
-                />
-              </div>
-
-              <div className='flex justify-between gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setV0Prompt('')}
-                  disabled={isV0Loading}
-                >
-                  クリア
-                </Button>
-                <Button
-                  size='sm'
-                  onClick={generateV0Element}
-                  disabled={isV0Loading || !v0Prompt.trim()}
-                >
-                  {isV0Loading ? (
-                    <>
-                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      生成中...
-                    </>
-                  ) : (
-                    '生成'
-                  )}
-                </Button>
-              </div>
+        <Popover open={isChartPopoverOpen} onOpenChange={setIsChartPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              className='w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-primary hover:bg-primary/90'
+              size='icon'
+              variant='default'
+            >
+              <BarChart3 className='h-5 w-5' />
+              <span className='sr-only'>チャート追加</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-80 p-4' side='left'>
+            <div className='space-y-4'>
+              <h3 className='font-medium text-sm'>チャート生成</h3>
+              <ChartGenerator onDataGenerated={handleChartGenerated} />
             </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-      <Popover open={isSvgPopoverOpen} onOpenChange={setIsSvgPopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size='sm'
-            className='rounded-full bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-1'
-          >
-            <Image className='h-5 w-5' />
-            <span>背景</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className='w-80' align='center'>
-          <div className='space-y-3'>
-            <h3 className='font-medium'>背景選択</h3>
+          </PopoverContent>
+        </Popover>
 
-            <div className='overflow-x-auto pb-2 max-h-[300px]'>
-              <div
-                className='flex flex-wrap gap-2 p-1'
-                style={{ minWidth: 'max-content' }}
-              >
+        {/* <Popover open={isSvgPopoverOpen} onOpenChange={setIsSvgPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              className='w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-primary hover:bg-primary/90'
+              size='icon'
+              variant='default'
+            >
+              <ImageIcon className='h-5 w-5' />
+              <span className='sr-only'>SVG追加</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-80 p-4' side='left'>
+            <div className='space-y-4'>
+              <h3 className='font-medium text-sm'>アイコン</h3>
+              <div className='grid grid-cols-3 gap-2'>
                 {isLoadingSvg ? (
-                  <div className='flex items-center justify-center w-full py-4'>
-                    <Loader2 className='h-6 w-6 animate-spin text-gray-400' />
+                  <div className='col-span-3 flex justify-center py-4'>
+                    <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
                   </div>
                 ) : (
-                  svgIcons.map((icon) => (
-                    <div
+                  svgIcons.slice(0, 9).map((icon) => (
+                    <Button
                       key={icon.id}
-                      className='flex flex-col items-center cursor-pointer hover:bg-gray-100 p-2 rounded-md transition-colors'
+                      variant='outline'
+                      size='sm'
+                      className='h-12 flex items-center justify-center p-1'
                       onClick={() => handleApplySvgIcon(icon)}
                     >
-                      <div className='w-16 h-16 flex items-center justify-center bg-white rounded-md border border-gray-200 p-2'>
-                        <img
-                          src={icon.path}
-                          alt={icon.name}
-                          className='max-w-full max-h-full'
-                        />
-                      </div>
-                      <span className='text-xs mt-1'>{icon.name}</span>
-                    </div>
+                      <img
+                        src={icon.path}
+                        alt={icon.name}
+                        className='h-8 w-8'
+                      />
+                    </Button>
                   ))
                 )}
               </div>
             </div>
+          </PopoverContent>
+        </Popover> */}
 
-            <p className='text-xs text-gray-500'>
-              アイコンをクリックするとPDFに追加されます
-            </p>
-          </div>
-        </PopoverContent>
-      </Popover>
-
-      <Popover open={isSizePopoverOpen} onOpenChange={setIsSizePopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size='sm'
-            className='rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90 flex items-center gap-1'
-          >
-            <FileText className='h-5 w-5' />
-            <span>サイズ設定</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className='w-80' align='center'>
-          <div className='space-y-4'>
-            <h3 className='font-medium'>PDFサイズ設定</h3>
-            <p className='text-sm text-gray-500'>
-              用紙サイズを選択してください。現在のサイズ:{' '}
-              {PAPER_SIZES[selectedPaperSize].label}
-            </p>
-
-            <div className='grid grid-cols-1 gap-2'>
-              {Object.entries(PAPER_SIZES).map(([key, size]) => (
-                <Button
-                  key={key}
-                  variant={selectedPaperSize === key ? 'default' : 'outline'}
-                  size='sm'
-                  className='justify-start'
-                  onClick={() => handleChangePaperSize(key as PaperSizeKey)}
-                >
-                  {getPaperSizeIcon(key as PaperSizeKey)}
-                  {size.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-
-      <Popover
-        open={isLayoutEditPopoverOpen}
-        onOpenChange={setIsLayoutEditPopoverOpen}
-      >
-        <PopoverTrigger asChild>
-          <Button
-            className='flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-800 dark:hover:bg-indigo-900 text-white'
-            size='sm'
-          >
-            <LayoutGrid className='w-4 h-4' />
-            <span>レイアウト編集</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className='w-80'>
-          <div className='grid gap-3'>
-            <div className='space-y-1'>
-              <h4 className='font-medium leading-none'>レイアウト編集</h4>
-              <p className='text-sm text-muted-foreground'>
-                現在のデザインを編集する指示を入力してください
-              </p>
-            </div>
-            <div className='grid gap-2'>
-              <div className='grid gap-1'>
-                <Textarea
-                  id='layout-edit-prompt'
-                  placeholder='例: 見出しを大きくして、テーブルを中央に配置して...'
-                  className='col-span-2 h-20'
-                  value={layoutEditPrompt}
-                  onChange={(e) => setLayoutEditPrompt(e.target.value)}
-                  disabled={isLayoutEditLoading}
-                />
-                {layoutEditError && (
-                  <p className='text-sm text-red-500'>{layoutEditError}</p>
-                )}
-              </div>
-              <div className='grid grid-cols-2 gap-2'>
-                <div className='grid gap-1'>
-                  <Label htmlFor='layout-edit-model'>モデル</Label>
-                  <Select
-                    value={selectedLayoutEditModel}
-                    onValueChange={(value) => setSelectedLayoutEditModel(value)}
-                    disabled={isLayoutEditLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='モデルを選択' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {models.map((model) => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='grid gap-1'>
-                  <Label htmlFor='layout-edit-color'>カラーパターン</Label>
-                  <Select
-                    value={selectedLayoutEditColorPattern}
-                    onValueChange={(value) =>
-                      setSelectedLayoutEditColorPattern(
-                        value as ColorPatternKey
-                      )
-                    }
-                    disabled={isLayoutEditLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='カラーを選択' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {Object.keys(COLOR_PATTERNS).map((key) => (
-                          <SelectItem key={key} value={key}>
-                            {key}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className='grid gap-1'>
-                <Label htmlFor='layout-pattern'>レイアウトパターン</Label>
-                <Select
-                  value={selectedLayoutPattern}
-                  onValueChange={setSelectedLayoutPattern}
-                  disabled={isLayoutEditLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='レイアウトパターンを選択' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {layoutPatterns.map((pattern) => (
-                        <SelectItem key={pattern.value} value={pattern.value}>
-                          {pattern.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='grid gap-1'>
-                <Label htmlFor='element-spacing'>要素間隔</Label>
-                <Select
-                  value={elementSpacing}
-                  onValueChange={setElementSpacing}
-                  disabled={isLayoutEditLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='要素間隔を選択' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {spacingOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Switch
-                  id='auto-size'
-                  checked={autoSizeElements}
-                  onCheckedChange={setAutoSizeElements}
-                  disabled={isLayoutEditLoading}
-                />
-                <Label htmlFor='auto-size'>
-                  コンテンツに応じたサイズ自動調整
+        <Popover
+          open={isUrlImagePopoverOpen}
+          onOpenChange={setIsUrlImagePopoverOpen}
+        >
+          <PopoverTrigger asChild>
+            <Button
+              className='w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-primary hover:bg-primary/90'
+              size='icon'
+              variant='default'
+            >
+              <ImageIcon className='h-5 w-5' />
+              <span className='sr-only'>画像生成</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-80 p-4' side='left'>
+            <div className='space-y-4'>
+              <h3 className='font-medium text-sm'>AI画像生成</h3>
+              <div className='space-y-2'>
+                <Label htmlFor='image-prompt' className='text-xs'>
+                  プロンプト
                 </Label>
+                <Textarea
+                  id='image-prompt'
+                  placeholder='生成したい画像について教えてください'
+                  value={imagePrompt}
+                  onChange={(e) => setImagePrompt(e.target.value)}
+                  className='h-24 text-xs'
+                />
               </div>
-              <Button
-                onClick={generateLayoutEdit}
-                disabled={isLayoutEditLoading || !layoutEditPrompt.trim()}
-              >
-                {isLayoutEditLoading ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    生成中...
-                  </>
-                ) : (
-                  '編集を適用'
-                )}
-              </Button>
+              <div className='space-y-2'>
+                <Label htmlFor='image-count' className='text-xs'>
+                  画像枚数 (1-4)
+                </Label>
+                <Input
+                  id='image-count'
+                  type='number'
+                  min={1}
+                  max={4}
+                  value={imageCount}
+                  onChange={(e) => setImageCount(parseInt(e.target.value) || 1)}
+                  className='text-xs'
+                />
+              </div>
+              {imageError && (
+                <div className='text-red-500 text-xs'>{imageError}</div>
+              )}
+              <div className='flex justify-end'>
+                <Button
+                  size='sm'
+                  disabled={isImageLoading || !imagePrompt.trim()}
+                  onClick={generateUrlImageElements}
+                  className='text-xs'
+                >
+                  {isImageLoading ? (
+                    <>
+                      <Loader2 className='mr-2 h-3 w-3 animate-spin' />
+                      生成中
+                    </>
+                  ) : (
+                    <>生成</>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <Button
+        className='w-12 h-12 rounded-full shadow-lg flex items-center justify-center bg-primary hover:bg-primary/90'
+        size='icon'
+        variant='default'
+      >
+        <PlusIcon className='h-6 w-6' />
+        <span className='sr-only'>追加</span>
+      </Button>
     </div>
   );
 }

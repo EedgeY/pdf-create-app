@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>マインドマップサンプル</title>
+    <style>
+      body {
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .mindmap-container {
+        width: 100%;
+        height: 600px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .control-group {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 120px;
+        font-family: monospace;
+      }
+
+      button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 10px;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>マインドマップ サンプル</h1>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="nodeColor">ノードの色:</label>
+          <input type="color" id="nodeColor" value="#4CAF50" />
+        </div>
+
+        <div class="control-group">
+          <label for="lineColor">線の色:</label>
+          <input type="color" id="lineColor" value="#333333" />
+        </div>
+
+        <div class="control-group">
+          <label for="nodeBorderRadius">ノードの角丸半径:</label>
+          <input
+            type="number"
+            id="nodeBorderRadius"
+            value="10"
+            min="0"
+            max="30"
+          />
+        </div>
+
+        <div class="control-group">
+          <label for="lineType">線のタイプ:</label>
+          <select id="lineType">
+            <option value="curved">曲線</option>
+            <option value="straight">直線</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="mapData">マインドマップデータ (JSON):</label>
+        <textarea id="mapData"></textarea>
+      </div>
+
+      <button id="renderButton">マインドマップを描画</button>
+      <button id="saveButton">SVGを保存</button>
+
+      <div class="mindmap-container" id="mindmap-container"></div>
+    </div>
+
+    <script>
+      // サンプルデータ
+      const sampleData = {
+        id: 'root',
+        text: 'メインテーマ',
+        children: [
+          {
+            id: 'node1',
+            text: 'アイデア1',
+            children: [
+              { id: 'node1-1', text: 'サブアイデア1.1' },
+              { id: 'node1-2', text: 'サブアイデア1.2' },
+            ],
+          },
+          {
+            id: 'node2',
+            text: 'アイデア2',
+            children: [
+              { id: 'node2-1', text: 'サブアイデア2.1' },
+              { id: 'node2-2', text: 'サブアイデア2.2' },
+            ],
+          },
+          {
+            id: 'node3',
+            text: 'アイデア3',
+            children: [{ id: 'node3-1', text: 'サブアイデア3.1' }],
+          },
+        ],
+      };
+
+      // テキストエリアに初期データをセット
+      document.getElementById('mapData').value = JSON.stringify(
+        sampleData,
+        null,
+        2
+      );
+
+      // ノードの配置を計算する関数
+      function calculateNodePositions(node, x, y, level = 0, options = {}) {
+        // ノードの大きさの計算
+        const nodeWidth = 120;
+        const nodeHeight = 40;
+
+        // 水平と垂直方向の間隔
+        const horizontalGap = 60;
+        const verticalGap = 80;
+
+        // 子ノードの位置計算
+        let positions = [];
+
+        if (node.children && node.children.length > 0) {
+          // 子ノードの総数
+          const childCount = node.children.length;
+
+          // 子ノードの垂直方向の総高さを計算
+          const totalHeight =
+            childCount * nodeHeight + (childCount - 1) * verticalGap;
+
+          // 最初の子ノードのY座標
+          let startY = y - totalHeight / 2;
+
+          // 子ノードごとに位置を計算
+          for (let i = 0; i < childCount; i++) {
+            const childY = startY + i * (nodeHeight + verticalGap);
+            const childX = x + nodeWidth + horizontalGap;
+
+            const childPos = calculateNodePositions(
+              node.children[i],
+              childX,
+              childY,
+              level + 1,
+              options
+            );
+
+            positions.push(childPos);
+          }
+        }
+
+        // 現在のノードの情報を返す
+        return {
+          node,
+          x,
+          y,
+          width: nodeWidth,
+          height: nodeHeight,
+          level,
+          childPositions: positions,
+        };
+      }
+
+      // ノードとリンクを再帰的に描画する関数
+      function renderNodeAndLinks(svgGroup, nodePos, options) {
+        const { node, x, y, width, height, childPositions } = nodePos;
+
+        // ノードの色を決定（個別設定があればそれを使用、なければデフォルト）
+        const nodeColor = node.color || options.nodeColor || '#4CAF50';
+        const lineColor = options.lineColor || '#333333';
+        const borderRadius = options.nodeBorderRadius || 10;
+        const lineType = options.lineType || 'curved';
+
+        // ノードを描画
+        const rect = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'rect'
+        );
+        rect.setAttribute('x', String(x));
+        rect.setAttribute('y', String(y));
+        rect.setAttribute('width', String(width));
+        rect.setAttribute('height', String(height));
+        rect.setAttribute('rx', String(borderRadius));
+        rect.setAttribute('ry', String(borderRadius));
+        rect.setAttribute('fill', nodeColor);
+        rect.setAttribute('stroke', lineColor);
+        rect.setAttribute('stroke-width', '1');
+        svgGroup.appendChild(rect);
+
+        // テキストを描画
+        const text = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'text'
+        );
+        text.setAttribute('x', String(x + width / 2));
+        text.setAttribute('y', String(y + height / 2));
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', '12');
+        text.setAttribute('fill', '#ffffff');
+        text.textContent = node.text;
+        svgGroup.appendChild(text);
+
+        // 子ノードを描画
+        if (childPositions && childPositions.length > 0) {
+          childPositions.forEach((childPos) => {
+            // 親ノードと子ノードを結ぶ線を描画
+            if (lineType === 'curved') {
+              // 曲線パスを描画
+              const path = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'path'
+              );
+              const startX = x + width;
+              const startY = y + height / 2;
+              const endX = childPos.x;
+              const endY = childPos.y + childPos.height / 2;
+
+              // 曲線の制御点
+              const controlX = (startX + endX) / 2;
+
+              const d = `M ${startX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${endX} ${endY}`;
+              path.setAttribute('d', d);
+              path.setAttribute('fill', 'none');
+              path.setAttribute('stroke', lineColor);
+              path.setAttribute('stroke-width', '1.5');
+              svgGroup.appendChild(path);
+            } else {
+              // 直線を描画
+              const line = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'line'
+              );
+              line.setAttribute('x1', String(x + width));
+              line.setAttribute('y1', String(y + height / 2));
+              line.setAttribute('x2', String(childPos.x));
+              line.setAttribute('y2', String(childPos.y + childPos.height / 2));
+              line.setAttribute('stroke', lineColor);
+              line.setAttribute('stroke-width', '1.5');
+              svgGroup.appendChild(line);
+            }
+
+            // 子ノードを再帰的に描画
+            renderNodeAndLinks(svgGroup, childPos, options);
+          });
+        }
+      }
+
+      // マインドマップを描画する関数
+      function renderMindMap() {
+        const container = document.getElementById('mindmap-container');
+        container.innerHTML = '';
+
+        try {
+          // オプションを取得
+          const options = {
+            nodeColor: document.getElementById('nodeColor').value,
+            lineColor: document.getElementById('lineColor').value,
+            nodeBorderRadius: parseInt(
+              document.getElementById('nodeBorderRadius').value
+            ),
+            lineType: document.getElementById('lineType').value,
+          };
+
+          // データを取得
+          const mapDataText = document.getElementById('mapData').value;
+          const mapData = JSON.parse(mapDataText);
+
+          // SVG要素の作成
+          const width = container.clientWidth;
+          const height = container.clientHeight;
+
+          const svg = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'svg'
+          );
+          svg.setAttribute('width', String(width));
+          svg.setAttribute('height', String(height));
+          svg.style.fontFamily = 'sans-serif';
+          svg.style.backgroundColor = 'white';
+
+          // メインのグループ要素
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          svg.appendChild(g);
+
+          // ノードの位置を計算
+          const centerX = width / 2 - 150;
+          const centerY = height / 2;
+          const rootPosition = calculateNodePositions(
+            mapData,
+            centerX,
+            centerY,
+            0,
+            options
+          );
+
+          // ノードとリンクを再帰的に描画
+          renderNodeAndLinks(g, rootPosition, options);
+
+          // SVGをコンテナに追加
+          container.appendChild(svg);
+        } catch (error) {
+          console.error('マインドマップの描画中にエラーが発生しました:', error);
+          container.innerHTML = `<div style="color: red; padding: 20px;">エラー: ${error.message}</div>`;
+        }
+      }
+
+      // SVGを保存する関数
+      function saveSVG() {
+        const svg = document.querySelector('#mindmap-container svg');
+        if (!svg) {
+          alert(
+            '保存するSVGがありません。まずマインドマップを描画してください。'
+          );
+          return;
+        }
+
+        // SVG文字列を取得
+        const svgString = new XMLSerializer().serializeToString(svg);
+        const blob = new Blob([svgString], {
+          type: 'image/svg+xml;charset=utf-8',
+        });
+
+        // ダウンロードリンクを作成
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'mindmap.svg';
+
+        // リンクをクリックしてダウンロード
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // イベントリスナーの設定
+      document
+        .getElementById('renderButton')
+        .addEventListener('click', renderMindMap);
+      document.getElementById('saveButton').addEventListener('click', saveSVG);
+
+      // 初期描画
+      renderMindMap();
+    </script>
+  </body>
+</html>

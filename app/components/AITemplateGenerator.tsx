@@ -1,22 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from '@/components/ui/card';
-import { Template, BLANK_PDF } from '@pdfme/common';
-import { useToast } from '@/components/ui/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Loader2, Sparkles, RotateCw } from 'lucide-react';
 import { models } from '@/app/helper';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -24,6 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { BLANK_PDF, Template } from '@pdfme/common';
+import { AlertCircle, Loader2, RotateCw, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 
 interface AITemplateGeneratorProps {
   onApplyTemplate: (template: Template) => void;
@@ -414,154 +406,150 @@ schema: [
   ];
 
   return (
-    <Card className='w-full'>
-      <CardHeader className='relative overflow-hidden'>
-        <div className='absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full opacity-20'></div>
-        <div className='absolute -left-10 -bottom-10 w-32 h-32 bg-gradient-to-tr from-blue-400 to-cyan-500 rounded-full opacity-20'></div>
-
-        <CardTitle className='flex items-center gap-2 text-2xl font-bold'>
-          <span className='bg-gradient-to-r from-pink-500 to-violet-500 text-transparent bg-clip-text'>
-            AI帳票テンプレート生成
-          </span>
-          <span className='text-xs font-normal px-2 py-1 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white'>
-            PDF
-          </span>
-          <span className='text-xs font-normal px-2 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white'>
-            OpenRouter
-          </span>
-        </CardTitle>
-        <CardDescription className='relative z-10'>
-          生成AIに希望する帳票の詳細を伝えて、テンプレートを自動生成します
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div>
-          <Label htmlFor='template-type-select'>テンプレートタイプ</Label>
-          <Select
-            value={selectedTemplateType}
-            onValueChange={setSelectedTemplateType}
-          >
-            <SelectTrigger id='template-type-select'>
-              <SelectValue placeholder='テンプレートタイプを選択' />
-            </SelectTrigger>
-            <SelectContent>
-              {templateTypes.map((type, index) => (
-                <SelectItem key={index} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='mt-4'>
-          <Label htmlFor='page-size-select'>ページサイズ</Label>
-          <Select value={selectedPageSize} onValueChange={setSelectedPageSize}>
-            <SelectTrigger id='page-size-select'>
-              <SelectValue placeholder='ページサイズを選択' />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizes.map((size, index) => (
-                <SelectItem key={index} value={size}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='mt-4'>
-          <Label htmlFor='local-style-select'>スタイル</Label>
-          <Select
-            value={selectedLocalStyle}
-            onValueChange={setSelectedLocalStyle}
-          >
-            <SelectTrigger id='local-style-select'>
-              <SelectValue placeholder='スタイルを選択' />
-            </SelectTrigger>
-            <SelectContent>
-              {localStyles.map((style, index) => (
-                <SelectItem key={index} value={style}>
-                  {style}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='mt-4'>
-          <Label htmlFor='language-select'>言語</Label>
-          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-            <SelectTrigger id='language-select'>
-              <SelectValue placeholder='言語を選択' />
-            </SelectTrigger>
-            <SelectContent>
-              {languages.map((language, index) => (
-                <SelectItem key={index} value={language}>
-                  {language}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='space-y-4'>
-          <div className='relative'>
-            <Label htmlFor='prompt'>プロンプト</Label>
-            <div className='relative'>
-              <Textarea
-                id='prompt'
-                placeholder=' 作成したい帳票の詳細を入力してください（例：請求書テンプレートを作成してください。会社名、ロゴ、請求日...）　
-                プロンプト生成もできます(google/gemini-2.0-flash-001)。'
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className='min-h-32 pr-10'
-              />
-              <Button
-                variant='ghost'
-                size='icon'
-                className='absolute right-2 top-2 p-1'
-                onClick={generateRandomPrompt}
-                disabled={isGeneratingPrompt}
-              >
-                {isGeneratingPrompt ? (
-                  <RotateCw className='h-5 w-5 animate-spin' />
-                ) : (
-                  <Sparkles className='h-5 w-5' />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor='model-select'>使用するモデル</Label>
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger id='model-select'>
-                <SelectValue
-                  placeholder='モデルを選択'
-                  defaultValue={models[2]}
-                />
+    <div className='space-y-6'>
+      <div className='grid gap-4 py-2'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='template-type'>テンプレートタイプ</Label>
+            <Select
+              value={selectedTemplateType}
+              onValueChange={setSelectedTemplateType}
+            >
+              <SelectTrigger id='template-type'>
+                <SelectValue placeholder='タイプを選択' />
               </SelectTrigger>
               <SelectContent>
-                {models.map((model, index) => (
-                  <SelectItem key={index} value={model}>
-                    {model}
+                {templateTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {error && (
-            <Alert variant='destructive'>
-              <AlertCircle className='h-4 w-4' />
-              <AlertTitle>エラー</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <div className='space-y-2'>
+            <Label htmlFor='local-style'>スタイル</Label>
+            <Select
+              value={selectedLocalStyle}
+              onValueChange={setSelectedLocalStyle}
+            >
+              <SelectTrigger id='local-style'>
+                <SelectValue placeholder='スタイルを選択' />
+              </SelectTrigger>
+              <SelectContent>
+                {localStyles.map((style) => (
+                  <SelectItem key={style} value={style}>
+                    {style}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </CardContent>
-      <CardFooter>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='language'>言語</Label>
+            <Select
+              value={selectedLanguage}
+              onValueChange={setSelectedLanguage}
+            >
+              <SelectTrigger id='language'>
+                <SelectValue placeholder='言語を選択' />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map((language) => (
+                  <SelectItem key={language} value={language}>
+                    {language}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='page-size'>ページサイズ</Label>
+            <Select
+              value={selectedPageSize}
+              onValueChange={setSelectedPageSize}
+            >
+              <SelectTrigger id='page-size'>
+                <SelectValue placeholder='サイズを選択' />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizes.map((size) => (
+                  <SelectItem key={size} value={size}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className='space-y-2'>
+          <div className='flex items-center justify-between'>
+            <Label htmlFor='prompt'>プロンプト</Label>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={generateRandomPrompt}
+              disabled={isGeneratingPrompt}
+              className='h-8 text-xs'
+            >
+              {isGeneratingPrompt ? (
+                <>
+                  <Loader2 className='mr-2 h-3 w-3 animate-spin' />
+                  生成中
+                </>
+              ) : (
+                <>
+                  <RotateCw className='mr-2 h-3 w-3' />
+                  ランダム生成
+                </>
+              )}
+            </Button>
+          </div>
+          <Textarea
+            id='prompt'
+            placeholder='テンプレートの詳細を記述してください...'
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className='min-h-[120px]'
+          />
+        </div>
+
+        <div className='space-y-2'>
+          <Label htmlFor='model'>AIモデル</Label>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger id='model'>
+              <SelectValue placeholder='モデルを選択' />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant='destructive'>
+          <AlertCircle className='h-4 w-4' />
+          <AlertTitle>エラー</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className='flex justify-end'>
         <Button
           onClick={generateTemplate}
-          disabled={isLoading}
-          className='w-full'
+          disabled={isLoading || !prompt.trim()}
+          className='w-full sm:w-auto'
         >
           {isLoading ? (
             <>
@@ -569,11 +557,14 @@ schema: [
               生成中...
             </>
           ) : (
-            'テンプレートを生成'
+            <>
+              <Sparkles className='mr-2 h-4 w-4' />
+              テンプレート生成
+            </>
           )}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
 
